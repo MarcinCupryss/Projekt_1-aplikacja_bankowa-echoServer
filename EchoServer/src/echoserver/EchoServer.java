@@ -24,18 +24,20 @@ public class EchoServer {
         user.add("adam123");
         user.add("pass123");
         user.add("Adam");
+        user.add("1200");
         logins.add(user);
         ArrayList<String> user2 = new ArrayList<>(); // format "login pass nickname"
  
         user2.add("dama123");
         user2.add("pass123");
         user2.add("Dama");
+        user2.add("400");
         logins.add(user2);
 //        ArrayList<ArrayList<String>> logins = new ArrayList<>();
         ServerSocket serverSocket = null;
         Socket socket = null;
         try {
-            serverSocket = new ServerSocket(6666);
+            serverSocket = new ServerSocket(997);
         } catch (IOException e) {
             System.out.println(
                     "Błąd przy tworzeniu gniazda serwerowego " + e);

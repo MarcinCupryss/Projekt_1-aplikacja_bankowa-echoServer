@@ -77,7 +77,24 @@ public class EchoServerThread implements Runnable {
                                 login_pass = true;
                                 out.writeBytes("Correct login and password" + "\r");
                                 System.out.println(threadName + "| Line sent: " + "Correct login and password");
-                                break;
+                                //menu 
+                                while (login_pass){
+                                    line = brinp.readLine();
+                                    if ("saldo".equals(line)) {
+                                    out.writeBytes("Saldo: " + logins.get(i).get(3) +  "\r");
+                                    System.out.println(threadName + "| Line sent: " + logins.get(i).get(3));
+
+                                    } else if ("wplata".equals(line)) {
+                                    
+                                    } else if ("wyplata".equals(line)) {
+                                    
+                                    } else if ("przelew".equals(line)) {
+                                        
+                                    } else if ("logout".equals(line)) {
+                                        login_pass = false;
+                                        break;
+                                    } 
+                                }
                             }
                         }
                     }
