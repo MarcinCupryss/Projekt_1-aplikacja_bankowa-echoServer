@@ -99,45 +99,67 @@ public class EchoServerThread implements Runnable {
                         }
                     }
                 } else if ("register".equals(line)) {
-                    System.out.println(threadName + " wants to login.");
+                    System.out.println(threadName + " wants to register.");
                     boolean login_pass = false;
                     while (!login_pass) {
-                        out.writeBytes("Login password nickname?" + "\r");
-                        System.out.println(threadName + "| Line sent: " + "Login password nickname?");
+                        out.writeBytes("Enter name, password, and nickname:" + "\r");
+                        System.out.println(threadName + "| Line sent: " + "Enter name, password, and nickname:");
                         line = "";
                         while (line.length() < 1) {
                             try {
                                 line = brinp.readLine();
                                 System.out.println("Line:" + line.length());
                             } catch (IOException e) {
-                                System.out.println(threadName + "| Błąd wejścia-wyjścia." + e);
+                                System.out.println(threadName + "| Input-output error." + e);
                                 return;
                             }
                         }
-                        System.out.println(threadName + "| Login and pass and nick: " + line);
-                        s = line.split(" ");
-                        login = line;
-                        login_pass = true;
-                        for (int i = 0; i < logins.size(); i++) {
-                            if (logins.get(i).get(0).equals(s[0])) {
-                                login_pass = false;
-//                                out.writeBytes("Login already in use :(" + "\r");
-                                System.out.println(threadName + "| Line sent: " + "Login already in use :(");
-                                break;
+                        System.out.println(threadName + "| Name, password, and nickname: " + line);
+                        String[] parts = line.split(", ");
+                
+                        if (parts.length == 3) {
+                            String name = parts[0];
+                            String password = parts[1];
+                            String nickname = parts[2];
+                        
+                            boolean userExists = false;
+                            try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+                                String currentLine;
+                                while ((currentLine = br.readLine()) != null) {
+                                    String[] userData = currentLine.split(", ");
+                                    if (userData.length >= 3 && userData[0].equals(name)) {
+                                        userExists = true;
+                                        break;
+                                    }
+                                }
+                            } catch (IOException e) {
+                                System.err.println(threadName + "| Error reading file: " + e.getMessage());
                             }
-                        }
-                        if (login_pass) {
-                            s = login.split(" ");
-                            ArrayList<String> new_user = new ArrayList<>();
-                            for (int i = 0; i < 3; i++) {
-                                new_user.add(s[i]);
+                            
+                            if (userExists) {
+                                out.writeBytes("User with this login already exists." + "\r");
+                                System.out.println(threadName + "| User with this login already exists.");
+                            } else {
+                                try (FileWriter fw = new FileWriter("users.txt", true);
+                                        BufferedWriter bw = new BufferedWriter(fw);
+                                        PrintWriter pw = new PrintWriter(bw)) {
+                                    pw.println(name + ", " + password + ", " + nickname + ", 0.0"); // Dodajemy użytkownika z saldem 0
+                                    pw.flush();
+                                    System.out.println(threadName + "| User added to the file.");
+                                } catch (IOException e) {
+                                    System.err.println(threadName + "| Error writing to file: " + e.getMessage());
+                                    return;
+                                }
+                
+                                out.writeBytes("User registered temporarily" + "\r");
+                                login_pass = true;
                             }
-                            logins.add(new_user);
-
-                            out.writeBytes("User registered temporarily" + "\r");
+                        } else {
+                            System.out.println(threadName + "| Invalid data format. Required: name, password, nickname.");
+                            out.writeBytes("Invalid data format. Required: name, password, nickname" + "\r");
                         }
                     }
-
+            
                 } else if ("list".equals(line)) {
                     String user_list = "";
                     for (int i = 0; i < logins.size(); i++) {

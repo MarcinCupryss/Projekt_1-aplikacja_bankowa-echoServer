@@ -1,0 +1,2 @@
+marcin, pass, cuprys, 0.0
+adam123, pass123, adam, 0.0
