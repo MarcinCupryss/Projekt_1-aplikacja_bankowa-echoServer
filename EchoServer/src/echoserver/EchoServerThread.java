@@ -26,6 +26,21 @@ public class EchoServerThread implements Runnable {
         this.logins = logins;
     }
 
+    private String findUserSaldo(String login) {
+        try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length >= 4 && userData[0].equals(login)) {
+                    return userData[3]; // Zwracamy saldo użytkownika
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        return "0.0"; // Jeśli nie znaleziono użytkownika, zwracamy saldo 0
+    }
+
     public void run() {
         //Deklaracje zmiennych
 
@@ -46,7 +61,7 @@ public class EchoServerThread implements Runnable {
             return;
         }
         String line = null;
-        String login = null;
+        //String login = null;
         //pętla główna
         while (true) {
             String[] s;
@@ -57,45 +72,78 @@ public class EchoServerThread implements Runnable {
                     System.out.println(threadName + " wants to login.");
                     boolean login_pass = false;
                     while (!login_pass) {
-                        out.writeBytes("Login and password?" + "\r");
-                        System.out.println(threadName + "| Line sent: " + "Login and password?");
+                        out.writeBytes("Enter login and password:" + "\r");
+                        System.out.println(threadName + "| Line sent: " + "Enter login and password:");
                         line = "";
                         while (line.length() < 1) {
                             try {
                                 line = brinp.readLine();
                                 System.out.println("Line:" + line.length());
                             } catch (IOException e) {
-                                System.out.println(threadName + "| Błąd wejścia-wyjścia." + e);
+                                System.out.println(threadName + "| Input-output error." + e);
                                 return;
                             }
                         }
-                        System.out.println(threadName + "| Login and pass: " + line);
-                        s = line.split(" ");
-                        login = line;
-                        for (int i = 0; i < logins.size(); i++) {
-                            if (logins.get(i).get(0).equals(s[0]) && logins.get(i).get(1).equals(s[1])) {
-                                login_pass = true;
-                                out.writeBytes("Correct login and password" + "\r");
-                                System.out.println(threadName + "| Line sent: " + "Correct login and password");
-                                //menu 
-                                while (login_pass){
-                                    line = brinp.readLine();
-                                    if ("saldo".equals(line)) {
-                                    out.writeBytes("Saldo: " + logins.get(i).get(3) +  "\r");
-                                    System.out.println(threadName + "| Line sent: " + logins.get(i).get(3));
-
-                                    } else if ("wplata".equals(line)) {
-                                    
-                                    } else if ("wyplata".equals(line)) {
-                                    
-                                    } else if ("przelew".equals(line)) {
-                                        
-                                    } else if ("logout".equals(line)) {
-                                        login_pass = false;
+                        System.out.println(threadName + "| Login and password: " + line);
+                        String[] parts = line.split(", "); // Rozdzielamy dane na części
+                
+                        if (parts.length == 2) {
+                            String login = parts[0];
+                            String password = parts[1];
+                
+                            // Sprawdzanie, czy użytkownik istnieje i hasło jest poprawne
+                            boolean userExists = false;
+                            try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+                                String currentLine;
+                                while ((currentLine = br.readLine()) != null) {
+                                    String[] userData = currentLine.split(", ");
+                                    if (userData.length >= 2 && userData[0].equals(login) && userData[1].equals(password)) {
+                                        userExists = true;
                                         break;
-                                    } 
+                                    }
                                 }
+                            } catch (IOException e) {
+                                System.err.println(threadName + "| Error reading file: " + e.getMessage());
                             }
+                
+                            if (userExists) {
+                                out.writeBytes("Correct login and password. Logged in." + "\r");
+                                System.out.println(threadName + "| Correct login and password. Logged in.");
+                                login_pass = true;
+                
+                                while (login_pass) {
+                                    try {
+                                        line = brinp.readLine();
+                                        if ("saldo".equals(line)) {
+                                            // Znajdź saldo użytkownika i wyślij je do klienta
+                                            String userSaldo = findUserSaldo(login);
+                                            out.writeBytes("Saldo: " + userSaldo + "\r");
+                                            System.out.println(threadName + "| Line sent: Saldo: " + userSaldo);
+                                        } else if ("wplata".equals(line)) {
+                                            // Obsłuż operację wpłaty
+                                        } else if ("wyplata".equals(line)) {
+                                            // Obsłuż operację wypłaty
+                                        } else if ("przelew".equals(line)) {
+                                            // Obsłuż operację przelewu
+                                        } else if ("logout".equals(line)) {
+                                            login_pass = false;
+                                            break;
+                                        } else {
+                                            out.writeBytes("Invalid operation." + "\r");
+                                            System.out.println(threadName + "| Invalid operation.");
+                                        }
+                                    } catch (IOException e) {
+                                        System.out.println(threadName + "| Input-output error." + e);
+                                        return;
+                                    }
+                                }
+                            } else {
+                                out.writeBytes("Incorrect login or password." + "\r");
+                                System.out.println(threadName + "| Incorrect login or password.");
+                            }
+                        } else {
+                            System.out.println(threadName + "| Invalid data format. Required: login, password.");
+                            out.writeBytes("Invalid data format. Required: login, password" + "\r");
                         }
                     }
                 } else if ("register".equals(line)) {

@@ -1,2 +1,2 @@
-marcin, pass, cuprys, 0.0
+marcin, pass, cuprys, 1200.5
 adam123, pass123, adam, 0.0
