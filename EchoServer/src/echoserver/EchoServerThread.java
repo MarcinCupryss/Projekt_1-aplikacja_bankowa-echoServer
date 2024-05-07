@@ -124,7 +124,7 @@ public class EchoServerThread implements Runnable {
                                         } else if ("logout".equals(line)) {
                                             out.writeBytes("Logged out successfully.\r");
                                             System.out.println(threadName + "| Logged out successfully.");
-                                            login_pass = false;
+                                            login_pass = true;
                                             break;
                                         } else {
                                             out.writeBytes("Invalid operation." + "\r");
