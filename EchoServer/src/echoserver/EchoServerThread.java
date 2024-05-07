@@ -32,17 +32,16 @@ public class EchoServerThread implements Runnable {
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
                 if (userData.length >= 4 && userData[0].equals(login)) {
-                    return userData[3]; // Zwracamy saldo użytkownika
+                    return userData[3]; 
                 }
             }
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
-        return "0.0"; // Jeśli nie znaleziono użytkownika, zwracamy saldo 0
+        return "0.0"; 
     }
 
     public void run() {
-        //Deklaracje zmiennych
 
         BufferedReader brinp = null;
         DataOutputStream out = null;
@@ -61,8 +60,7 @@ public class EchoServerThread implements Runnable {
             return;
         }
         String line = null;
-        //String login = null;
-        //pętla główna
+
         while (true) {
             String[] s;
             try {
@@ -85,13 +83,12 @@ public class EchoServerThread implements Runnable {
                             }
                         }
                         System.out.println(threadName + "| Login and password: " + line);
-                        String[] parts = line.split(", "); // Rozdzielamy dane na części
+                        String[] parts = line.split(", "); 
                 
                         if (parts.length == 2) {
                             String login = parts[0];
                             String password = parts[1];
                 
-                            // Sprawdzanie, czy użytkownik istnieje i hasło jest poprawne
                             boolean userExists = false;
                             try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
                                 String currentLine;
@@ -115,7 +112,6 @@ public class EchoServerThread implements Runnable {
                                     try {
                                         line = brinp.readLine();
                                         if ("saldo".equals(line)) {
-                                            // Znajdź saldo użytkownika i wyślij je do klienta
                                             String userSaldo = findUserSaldo(login);
                                             out.writeBytes("Saldo: " + userSaldo + "\r");
                                             System.out.println(threadName + "| Line sent: Saldo: " + userSaldo);
@@ -126,6 +122,8 @@ public class EchoServerThread implements Runnable {
                                         } else if ("przelew".equals(line)) {
                                             // Obsłuż operację przelewu
                                         } else if ("logout".equals(line)) {
+                                            out.writeBytes("Logged out successfully.\r");
+                                            System.out.println(threadName + "| Logged out successfully.");
                                             login_pass = false;
                                             break;
                                         } else {
@@ -146,6 +144,7 @@ public class EchoServerThread implements Runnable {
                             out.writeBytes("Invalid data format. Required: login, password" + "\r");
                         }
                     }
+
                 } else if ("register".equals(line)) {
                     System.out.println(threadName + " wants to register.");
                     boolean login_pass = false;
@@ -169,7 +168,7 @@ public class EchoServerThread implements Runnable {
                             String name = parts[0];
                             String password = parts[1];
                             String nickname = parts[2];
-                        
+                
                             boolean userExists = false;
                             try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
                                 String currentLine;
@@ -183,7 +182,7 @@ public class EchoServerThread implements Runnable {
                             } catch (IOException e) {
                                 System.err.println(threadName + "| Error reading file: " + e.getMessage());
                             }
-                            
+                
                             if (userExists) {
                                 out.writeBytes("User with this login already exists." + "\r");
                                 System.out.println(threadName + "| User with this login already exists.");
@@ -191,9 +190,16 @@ public class EchoServerThread implements Runnable {
                                 try (FileWriter fw = new FileWriter("users.txt", true);
                                         BufferedWriter bw = new BufferedWriter(fw);
                                         PrintWriter pw = new PrintWriter(bw)) {
-                                    pw.println(name + ", " + password + ", " + nickname + ", 0.0"); // Dodajemy użytkownika z saldem 0
+                                    pw.println(name + ", " + password + ", " + nickname + ", 0.0");
                                     pw.flush();
                                     System.out.println(threadName + "| User added to the file.");
+                
+                                    ArrayList<String> newUser = new ArrayList<>();
+                                    newUser.add(name);
+                                    newUser.add(password);
+                                    newUser.add(nickname);
+                                    newUser.add("0.0"); 
+                                    logins.add(newUser);
                                 } catch (IOException e) {
                                     System.err.println(threadName + "| Error writing to file: " + e.getMessage());
                                     return;
@@ -207,7 +213,7 @@ public class EchoServerThread implements Runnable {
                             out.writeBytes("Invalid data format. Required: name, password, nickname" + "\r");
                         }
                     }
-            
+                
                 } else if ("list".equals(line)) {
                     String user_list = "";
                     for (int i = 0; i < logins.size(); i++) {
@@ -215,7 +221,7 @@ public class EchoServerThread implements Runnable {
                     }
                     out.writeBytes(user_list + "\r");
 
-                } else { //odesłanie danych do klienta
+                } else { 
                     out.writeBytes(line + "\r");
                     System.out.println(threadName + "| Line sent: " + line);
                     line = brinp.readLine();
