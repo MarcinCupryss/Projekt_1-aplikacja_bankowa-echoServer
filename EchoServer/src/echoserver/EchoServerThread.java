@@ -215,11 +215,19 @@ public class EchoServerThread implements Runnable {
                     }
                 
                 } else if ("list".equals(line)) {
-                    String user_list = "";
-                    for (int i = 0; i < logins.size(); i++) {
-                        user_list += (logins.get(i).get(0) + " ");
+                    try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+                        String currentLine;
+                        StringBuilder userList = new StringBuilder();
+                        while ((currentLine = br.readLine()) != null) {
+                            String[] userData = currentLine.split(", ");
+                            if (userData.length >= 1) {
+                                userList.append(userData[0]).append(" ");
+                            }
+                        }
+                        out.writeBytes(userList.toString().trim() + "\r");
+                    } catch (IOException e) {
+                        System.err.println("Error reading file: " + e.getMessage());
                     }
-                    out.writeBytes(user_list + "\r");
 
                 } else { 
                     out.writeBytes(line + "\r");
