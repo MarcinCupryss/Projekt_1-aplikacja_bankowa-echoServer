@@ -116,7 +116,42 @@ public class EchoServerThread implements Runnable {
                                             out.writeBytes("Saldo: " + userSaldo + "\r");
                                             System.out.println(threadName + "| Line sent: Saldo: " + userSaldo);
                                         } else if ("wplata".equals(line)) {
-                                            // Obsłuż operację wpłaty
+                                            try {
+                                                out.writeBytes("Enter the amount to deposit:" + "\r");
+                                                line = brinp.readLine();
+                                                double depositAmount = Double.parseDouble(line);
+                                                
+                                                String userSaldo = findUserSaldo(login);
+                                                double saldo = Double.parseDouble(userSaldo);
+                                                
+                                                saldo += depositAmount;
+                                                try (BufferedReader file = new BufferedReader(new FileReader("users.txt"))) {
+                                                    List<String> lines = new ArrayList<>();
+                                                    String currentLine;
+                                                    while ((currentLine = file.readLine()) != null) {
+                                                        String[] userData = currentLine.split(", ");
+                                                        if (userData.length >= 4 && userData[0].equals(login)) {
+                                                            userData[3] = Double.toString(saldo);
+                                                            currentLine = String.join(", ", userData);
+                                                        }
+                                                        lines.add(currentLine);
+                                                    }
+                                                    try (BufferedWriter writer = new BufferedWriter(new FileWriter("users.txt"))) {
+                                                        for (String writeLine : lines) {
+                                                            writer.write(writeLine + "\n");
+                                                        }
+                                                    }
+                                                }
+                                                out.writeBytes("Deposit successful. New balance: " + saldo + "\r");
+                                                System.out.println(threadName + "| Deposit successful. New balance: " + saldo);
+                                            } catch (NumberFormatException e) {
+                                                out.writeBytes("Invalid amount format." + "\r");
+                                                System.out.println(threadName + "| Invalid amount format.");
+                                            } catch (IOException e) {
+                                                System.out.println(threadName + "| Input-output error." + e);
+                                                return;
+                                            }
+                                        
                                         } else if ("wyplata".equals(line)) {
                                             try {
                                                 out.writeBytes("Enter the amount to withdraw:" + "\r");
