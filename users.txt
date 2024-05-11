@@ -1,2 +1,2 @@
-marcin, pass, cuprys, 1200.5
-adam123, pass123, adam, 0.0
+Marcin, Cuprys, 95011301234, pass, 9900.0
+Piotr, Nowak, 99123101234, haslo, 0.0

@@ -31,14 +31,18 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 4 && userData[0].equals(login)) {
-                    return userData[3]; 
+                if (userData.length >= 5 && userData[0].equals(login)) {
+                    return userData[4]; 
                 }
             }
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
         return "0.0"; 
+    }
+
+    private boolean isValidPesel(String nip) {
+        return nip.matches("\\d{11}");
     }
 
     public void run() {
@@ -94,7 +98,7 @@ public class EchoServerThread implements Runnable {
                                 String currentLine;
                                 while ((currentLine = br.readLine()) != null) {
                                     String[] userData = currentLine.split(", ");
-                                    if (userData.length >= 2 && userData[0].equals(login) && userData[1].equals(password)) {
+                                    if (userData.length >= 2 && userData[0].equals(login) && userData[3].equals(password)) {
                                         userExists = true;
                                         break;
                                     }
@@ -130,8 +134,8 @@ public class EchoServerThread implements Runnable {
                                                     String currentLine;
                                                     while ((currentLine = file.readLine()) != null) {
                                                         String[] userData = currentLine.split(", ");
-                                                        if (userData.length >= 4 && userData[0].equals(login)) {
-                                                            userData[3] = Double.toString(saldo);
+                                                        if (userData.length >= 5 && userData[0].equals(login)) {
+                                                            userData[4] = Double.toString(saldo);
                                                             currentLine = String.join(", ", userData);
                                                         }
                                                         lines.add(currentLine);
@@ -171,8 +175,8 @@ public class EchoServerThread implements Runnable {
                                                         String currentLine;
                                                         while ((currentLine = file.readLine()) != null) {
                                                             String[] userData = currentLine.split(", ");
-                                                            if (userData.length >= 4 && userData[0].equals(login)) {
-                                                                userData[3] = Double.toString(saldo);
+                                                            if (userData.length >= 5 && userData[0].equals(login)) {
+                                                                userData[4] = Double.toString(saldo);
                                                                 currentLine = String.join(", ", userData);
                                                             }
                                                             lines.add(currentLine);
@@ -223,8 +227,8 @@ public class EchoServerThread implements Runnable {
                     System.out.println(threadName + " wants to register.");
                     boolean login_pass = false;
                     while (!login_pass) {
-                        out.writeBytes("Enter name, password, and nickname:" + "\r");
-                        System.out.println(threadName + "| Line sent: " + "Enter name, password, and nickname:");
+                        out.writeBytes("Enter name, lastname, PESEL and password:" + "\r");
+                        System.out.println(threadName + "| Line sent: " + "Enter name, lastname, PESEL and password:");
                         line = "";
                         while (line.length() < 1) {
                             try {
@@ -238,17 +242,18 @@ public class EchoServerThread implements Runnable {
                         System.out.println(threadName + "| Name, password, and nickname: " + line);
                         String[] parts = line.split(", ");
                 
-                        if (parts.length == 3) {
+                        if (parts.length == 4) {
                             String name = parts[0];
-                            String password = parts[1];
-                            String nickname = parts[2];
-                
+                            String lastname = parts[1];
+                            String pesel = parts[2];
+                            String password = parts[3];
+
                             boolean userExists = false;
                             try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
                                 String currentLine;
                                 while ((currentLine = br.readLine()) != null) {
                                     String[] userData = currentLine.split(", ");
-                                    if (userData.length >= 3 && userData[0].equals(name)) {
+                                    if (userData.length >= 4 && userData[2].equals(pesel)) {
                                         userExists = true;
                                         break;
                                     }
@@ -258,20 +263,24 @@ public class EchoServerThread implements Runnable {
                             }
                 
                             if (userExists) {
-                                out.writeBytes("User with this login already exists." + "\r");
-                                System.out.println(threadName + "| User with this login already exists.");
+                                out.writeBytes("User with this PESEL already exists." + "\r");
+                                System.out.println(threadName + "| User with this PESEL already exists.");
+                            } else if (!isValidPesel(pesel)) {
+                                out.writeBytes("Invalid PESEL format. PESEL must contain exactly 11 digits.\r");
+                                System.out.println(threadName + "| Invalid NIP format.");
                             } else {
                                 try (FileWriter fw = new FileWriter("users.txt", true);
                                         BufferedWriter bw = new BufferedWriter(fw);
                                         PrintWriter pw = new PrintWriter(bw)) {
-                                    pw.println(name + ", " + password + ", " + nickname + ", 0.0");
+                                    pw.println(name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0");
                                     pw.flush();
                                     System.out.println(threadName + "| User added to the file.");
                 
                                     ArrayList<String> newUser = new ArrayList<>();
                                     newUser.add(name);
+                                    newUser.add(lastname);
+                                    newUser.add(pesel);
                                     newUser.add(password);
-                                    newUser.add(nickname);
                                     newUser.add("0.0"); 
                                     logins.add(newUser);
                                 } catch (IOException e) {
@@ -283,8 +292,8 @@ public class EchoServerThread implements Runnable {
                                 login_pass = true;
                             }
                         } else {
-                            System.out.println(threadName + "| Invalid data format. Required: name, password, nickname.");
-                            out.writeBytes("Invalid data format. Required: name, password, nickname" + "\r");
+                            System.out.println(threadName + "| Invalid data format. Required: name, lastname, PESEL, password");
+                            out.writeBytes("Invalid data format. Required: nname, lastname, PESEL, password" + "\r");
                         }
                     }
                 
