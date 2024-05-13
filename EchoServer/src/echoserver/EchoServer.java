@@ -1,41 +1,16 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package echoserver;
 
-/**
- *
- * @author dzelazny
- */
 import java.net.*;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EchoServer {
 
     public static void main(String args[]) {
-        CopyOnWriteArrayList<ArrayList<String>> logins = new CopyOnWriteArrayList<ArrayList<String>>();
-        ArrayList<String> user = new ArrayList<>(); // format "login pass nickname"
-        user.add("adam123");
-        user.add("pass123");
-        user.add("Adam");
-        user.add("1200");
-        logins.add(user);
-        ArrayList<String> user2 = new ArrayList<>(); // format "login pass nickname"
- 
-        user2.add("dama123");
-        user2.add("pass123");
-        user2.add("Dama");
-        user2.add("400");
-        logins.add(user2);
-//        ArrayList<ArrayList<String>> logins = new ArrayList<>();
-        ServerSocket serverSocket = null;
-        Socket socket = null;
+        CopyOnWriteArrayList<ArrayList<String>> logins = new CopyOnWriteArrayList<>();
+        ServerSocket serverSocket = null; // Do akceptowania połączeń i przekazywania ich dalej
+        Socket socket = null; // Nawiązywanie połączenia z konkretnym użytkownikiem
         try {
             serverSocket = new ServerSocket(997);
         } catch (IOException e) {

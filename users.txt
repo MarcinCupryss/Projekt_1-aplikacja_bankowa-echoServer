@@ -1,2 +1,2 @@
-Marcin, Cuprys, 95011301234, pass, 9900.0
+Marcin, Cuprys, 95011301234, pass, 9548.0
 Piotr, Nowak, 99123101234, haslo, 0.0

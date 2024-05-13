@@ -48,7 +48,7 @@ public class EchoServerThread implements Runnable {
     public void run() {
 
         BufferedReader brinp = null;
-        DataOutputStream out = null;
+        DataOutputStream output = null;
         String threadName = Thread.currentThread().getName();
 
         //inicjalizacja strumieni
@@ -58,7 +58,7 @@ public class EchoServerThread implements Runnable {
                             socket.getInputStream()
                     )
             );
-            out = new DataOutputStream(socket.getOutputStream());
+            output = new DataOutputStream(socket.getOutputStream());
         } catch (IOException e) {
             System.out.println(threadName + "| Błąd przy tworzeniu strumieni " + e);
             return;
@@ -74,7 +74,7 @@ public class EchoServerThread implements Runnable {
                     System.out.println(threadName + " wants to login.");
                     boolean login_pass = false;
                     while (!login_pass) {
-                        out.writeBytes("Enter login and password:" + "\r");
+                        output.writeBytes("Enter login and password:" + "\r");
                         System.out.println(threadName + "| Line sent: " + "Enter login and password:");
                         line = "";
                         while (line.length() < 1) {
@@ -108,7 +108,7 @@ public class EchoServerThread implements Runnable {
                             }
                 
                             if (userExists) {
-                                out.writeBytes("Correct login and password. Logged in." + "\r");
+                                output.writeBytes("Correct login and password. Logged in." + "\r");
                                 System.out.println(threadName + "| Correct login and password. Logged in.");
                                 login_pass = true;
                 
@@ -117,11 +117,11 @@ public class EchoServerThread implements Runnable {
                                         line = brinp.readLine();
                                         if ("saldo".equals(line)) {
                                             String userSaldo = findUserSaldo(login);
-                                            out.writeBytes("Saldo: " + userSaldo + "\r");
+                                            output.writeBytes("Saldo: " + userSaldo + "\r");
                                             System.out.println(threadName + "| Line sent: Saldo: " + userSaldo);
                                         } else if ("wplata".equals(line)) {
                                             try {
-                                                out.writeBytes("Enter the amount to deposit:" + "\r");
+                                                output.writeBytes("Enter the amount to deposit:" + "\r");
                                                 line = brinp.readLine();
                                                 double depositAmount = Double.parseDouble(line);
                                                 
@@ -146,10 +146,10 @@ public class EchoServerThread implements Runnable {
                                                         }
                                                     }
                                                 }
-                                                out.writeBytes("Deposit successful. New balance: " + saldo + "\r");
+                                                output.writeBytes("Deposit successful. New balance: " + saldo + "\r");
                                                 System.out.println(threadName + "| Deposit successful. New balance: " + saldo);
                                             } catch (NumberFormatException e) {
-                                                out.writeBytes("Invalid amount format." + "\r");
+                                                output.writeBytes("Invalid amount format." + "\r");
                                                 System.out.println(threadName + "| Invalid amount format.");
                                             } catch (IOException e) {
                                                 System.out.println(threadName + "| Input-output error." + e);
@@ -158,7 +158,7 @@ public class EchoServerThread implements Runnable {
                                         
                                         } else if ("wyplata".equals(line)) {
                                             try {
-                                                out.writeBytes("Enter the amount to withdraw:" + "\r");
+                                                output.writeBytes("Enter the amount to withdraw:" + "\r");
                                                 line = brinp.readLine();
                                                 double withdrawAmount = Double.parseDouble(line);
                                                 
@@ -166,7 +166,7 @@ public class EchoServerThread implements Runnable {
                                                 double saldo = Double.parseDouble(userSaldo);
                                                 
                                                 if (withdrawAmount > saldo) {
-                                                    out.writeBytes("Insufficient funds." + "\r");
+                                                    output.writeBytes("Insufficient funds." + "\r");
                                                     System.out.println(threadName + "| Insufficient funds.");
                                                 } else {
                                                     saldo -= withdrawAmount;
@@ -187,11 +187,11 @@ public class EchoServerThread implements Runnable {
                                                             }
                                                         }
                                                     }
-                                                    out.writeBytes("Withdrawal successful. New balance: " + saldo + "\r");
+                                                    output.writeBytes("Withdrawal successful. New balance: " + saldo + "\r");
                                                     System.out.println(threadName + "| Withdrawal successful. New balance: " + saldo);
                                                 }
                                             } catch (NumberFormatException e) {
-                                                out.writeBytes("Invalid amount format." + "\r");
+                                                output.writeBytes("Invalid amount format." + "\r");
                                                 System.out.println(threadName + "| Invalid amount format.");
                                             } catch (IOException e) {
                                                 System.out.println(threadName + "| Input-output error." + e);
@@ -200,12 +200,12 @@ public class EchoServerThread implements Runnable {
                                         } else if ("przelew".equals(line)) {
                                             // Obsłuż operację przelewu
                                         } else if ("logout".equals(line)) {
-                                            out.writeBytes("Logged out successfully.\r");
-                                            System.out.println(threadName + "| Logged out successfully.");
+                                            output.writeBytes("Logged output successfully.\r");
+                                            System.out.println(threadName + "| Logged output successfully.");
                                             login_pass = true;
                                             break;
                                         } else {
-                                            out.writeBytes("Invalid operation." + "\r");
+                                            output.writeBytes("Invalid operation." + "\r");
                                             System.out.println(threadName + "| Invalid operation.");
                                         }
                                     } catch (IOException e) {
@@ -214,12 +214,12 @@ public class EchoServerThread implements Runnable {
                                     }
                                 }
                             } else {
-                                out.writeBytes("Incorrect login or password." + "\r");
+                                output.writeBytes("Incorrect login or password." + "\r");
                                 System.out.println(threadName + "| Incorrect login or password.");
                             }
                         } else {
                             System.out.println(threadName + "| Invalid data format. Required: login, password.");
-                            out.writeBytes("Invalid data format. Required: login, password" + "\r");
+                            output.writeBytes("Invalid data format. Required: login, password" + "\r");
                         }
                     }
 
@@ -227,7 +227,7 @@ public class EchoServerThread implements Runnable {
                     System.out.println(threadName + " wants to register.");
                     boolean login_pass = false;
                     while (!login_pass) {
-                        out.writeBytes("Enter name, lastname, PESEL and password:" + "\r");
+                        output.writeBytes("Enter name, lastname, PESEL and password:" + "\r");
                         System.out.println(threadName + "| Line sent: " + "Enter name, lastname, PESEL and password:");
                         line = "";
                         while (line.length() < 1) {
@@ -263,10 +263,10 @@ public class EchoServerThread implements Runnable {
                             }
                 
                             if (userExists) {
-                                out.writeBytes("User with this PESEL already exists." + "\r");
+                                output.writeBytes("User with this PESEL already exists." + "\r");
                                 System.out.println(threadName + "| User with this PESEL already exists.");
                             } else if (!isValidPesel(pesel)) {
-                                out.writeBytes("Invalid PESEL format. PESEL must contain exactly 11 digits.\r");
+                                output.writeBytes("Invalid PESEL format. PESEL must contain exactly 11 digits.\r");
                                 System.out.println(threadName + "| Invalid NIP format.");
                             } else {
                                 try (FileWriter fw = new FileWriter("users.txt", true);
@@ -288,12 +288,12 @@ public class EchoServerThread implements Runnable {
                                     return;
                                 }
                 
-                                out.writeBytes("User registered temporarily" + "\r");
+                                output.writeBytes("User registered temporarily" + "\r");
                                 login_pass = true;
                             }
                         } else {
                             System.out.println(threadName + "| Invalid data format. Required: name, lastname, PESEL, password");
-                            out.writeBytes("Invalid data format. Required: nname, lastname, PESEL, password" + "\r");
+                            output.writeBytes("Invalid data format. Required: nname, lastname, PESEL, password" + "\r");
                         }
                     }
                 
@@ -307,13 +307,13 @@ public class EchoServerThread implements Runnable {
                                 userList.append(userData[0]).append(" ");
                             }
                         }
-                        out.writeBytes(userList.toString().trim() + "\r");
+                        output.writeBytes(userList.toString().trim() + "\r");
                     } catch (IOException e) {
                         System.err.println("Error reading file: " + e.getMessage());
                     }
 
                 } else { 
-                    out.writeBytes(line + "\r");
+                    output.writeBytes(line + "\r");
                     System.out.println(threadName + "| Line sent: " + line);
                     line = brinp.readLine();
                 }
