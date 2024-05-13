@@ -7,8 +7,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EchoServer {
 
-    public static void main(String args[]) {
-        CopyOnWriteArrayList<ArrayList<String>> logins = new CopyOnWriteArrayList<>();
+    public static void main(String[] args) {
+//        CopyOnWriteArrayList<ArrayList<String>> logins = new CopyOnWriteArrayList<>();
         ServerSocket serverSocket = null; // Do akceptowania połączeń i przekazywania ich dalej
         Socket socket = null; // Nawiązywanie połączenia z konkretnym użytkownikiem
         try {
@@ -28,7 +28,8 @@ public class EchoServer {
             }
             System.out.println("Nadeszło połączenie...");
             System.out.println("Parametry połączenia: " + socket);
-            new Thread(new EchoServerThread(socket, logins)).start();
+//            new Thread(new EchoServerThread(socket, logins)).start();
+            new Thread(new Funkcje(socket)).start();
         }
     }
 }
