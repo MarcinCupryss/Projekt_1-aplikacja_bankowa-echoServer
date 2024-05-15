@@ -2,8 +2,6 @@ package echoserver;
 
 import java.net.*;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EchoServer {
 
@@ -28,8 +26,7 @@ public class EchoServer {
             }
             System.out.println("Nadeszło połączenie...");
             System.out.println("Parametry połączenia: " + socket);
-//            new Thread(new EchoServerThread(socket, logins)).start();
-            new Thread(new Funkcje(socket)).start();
+            new Thread(new EchoServerThread(socket)).start();
         }
     }
 }
