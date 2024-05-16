@@ -2,8 +2,10 @@ package echoserver;
 
 import java.net.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EchoServerThread implements Runnable {
@@ -20,61 +22,54 @@ public class EchoServerThread implements Runnable {
 
     public void run() {
         BufferedReader brinp = null;
-        DataOutputStream out = null;
+        BufferedWriter writer = null;
         String threadName = Thread.currentThread().getName();
 
-        //inicjalizacja strumieni
         try {
             brinp = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new DataOutputStream(socket.getOutputStream());
+            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
         } catch (IOException e) {
             System.out.println(threadName + "| Błąd przy tworzeniu strumieni " + e);
             return;
         }
         String line = null;
-//        boolean isLoggedIn = false;
 
-        // Główna pętla
         while (true) {
             try {
                 line = brinp.readLine();
                 System.out.println(threadName + "| Line read: " + line);
 
-                // Obsługa komend dla niezalogowanych użytkowników
                 if (isLoggedIn) {
-                    // Obsługa komend dla zalogowanych użytkowników
                     if ("saldo".equals(line)) {
-                        sendUserBalance(out, threadName, login);
+                        sendUserBalance(writer, threadName, login);
                     } else if ("wplata".equals(line)) {
-                        handleDeposit(brinp, out, threadName, login);
+                        handleDeposit(brinp, writer, threadName, login);
                     } else if ("wyplata".equals(line)) {
-                        handleWithdrawal(brinp, out, threadName, login);
+                        handleWithdrawal(brinp, writer, threadName, login);
                     } else if ("przelew".equals(line)) {
                         // Obsługa przelewu
                     } else if ("wyloguj".equals(line)) {
-                        logout(out, threadName);
-//                        login = null;
-//                        isLoggedIn = false;
+                        logout(writer, threadName);
                     } else if ("komendy".equals(line)) {
-                        getCommands(out);
+                        getCommands(writer);
                         System.out.println(threadName + "| User " + login + " got commands list.");
                     } else {
-                        out.writeBytes("Invalid operation.\r");
-                        out.flush();
+                        writer.write("Niepoprawna komenda!" + System.lineSeparator());
+                        writer.flush();
                         System.out.println(threadName + "| Invalid operation.");
                     }
                 } else if ("zaloguj".equals(line)) {
-                    handleLogin(brinp, out, threadName);
+                    handleLogin(brinp, writer, threadName);
                 } else if ("rejestracja".equals(line)) {
-                    handleRegistration(brinp, out, threadName);
+                    handleRegistration(brinp, writer, threadName);
                 } else if ("lista".equals(line)) {
-                    sendUserList(out);
+                    sendUserList(writer);
                 } else if ("komendy".equals(line)) {
-                    getCommands(out);
+                    getCommands(writer);
                     System.out.println(threadName + "| Sending commands list.");
                 } else {
-                    out.writeBytes("Invalid command.\r");
-                    out.flush();
+                    writer.write("Niepoprawna komenda!" + System.lineSeparator());
+                    writer.flush();
                     System.out.println(threadName + "| Invalid command.");
                 }
 
@@ -85,25 +80,21 @@ public class EchoServerThread implements Runnable {
         }
     }
 
-//    private boolean isLoggedIn(String line) {
-//        return line.startsWith("login") || line.startsWith("register");
-//    }
-
-    private void getCommands(DataOutputStream out) throws IOException {
+    private void getCommands(BufferedWriter writer) throws IOException {
         String commands = "";
         if (isLoggedIn) {
             commands = "Komendy do wyboru: saldo, wplata, wyplata, przelew, komendy, wyloguj";
         } else {
             commands = "Komendy do wyboru: zaloguj, rejestracja, lista, komendy";
         }
-        out.writeBytes(commands + "\r\n");
-        out.flush();
+        writer.write(commands + System.lineSeparator());
+        writer.flush();
     }
 
-    private void handleLogin(BufferedReader brinp, DataOutputStream out, String threadName) throws IOException {
+    private void handleLogin(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
         System.out.println(threadName + "| User wants to log in.");
-        out.writeBytes("Wprowadź login oraz haslo" + "\r");
-        out.flush();
+        writer.write("Wprowadź login oraz hasło." + System.lineSeparator());
+        writer.flush();
         System.out.println(threadName + "| Message sent: " + "Enter login and password:");
         String line = brinp.readLine();
 //        System.out.println(threadName + "| User entered login and password " + line);
@@ -128,33 +119,33 @@ public class EchoServerThread implements Runnable {
             }
 
             if (userExists) {
-                out.writeBytes("Zalogowano!" + "\r");
-                out.flush();
+                writer.write("Zalogowano!" + System.lineSeparator());
+                writer.flush();
                 System.out.println(threadName + "| User " + login + " has logged in.");
                 setLogin(login);
                 isLoggedIn = true;
             } else {
-                out.writeBytes("Niepoprawnie wpisano login/hasło" + "\r"); // Try again
-                out.flush();
+                writer.write("Niepoprawnie wpisano login/hasło." + System.lineSeparator()); // Try again
+                writer.flush();
                 System.out.println(threadName + "| User has put incorrect login and/or password.");
             }
         } else {
             System.out.println(threadName + "| Invalid data format. Required: login, password.");
-            out.writeBytes("Niepoprawny format danych, wprowadź login oraz hasło rozdzielone ', '" + "\r");
-            out.flush();
+            writer.write("Niepoprawny format danych, wprowadź login oraz hasło rozdzielone \", \"." + System.lineSeparator());
+            writer.flush();
         }
     }
 
-    private void handleRegistration(BufferedReader brinp, DataOutputStream out, String threadName) throws IOException {
-        out.writeBytes("Enter name, lastname, PESEL and password:" + "\r");
-        out.flush();
+    private void handleRegistration(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
+        writer.write("Podaj imię, nazwisko, PESEL, hasło rozdzielone \" ,\":" + System.lineSeparator());
+        writer.flush();
         System.out.println(threadName + "| Line sent: " + "Enter name, lastname, PESEL and password:");
         String line = "";
         while (line.length() < 1) {
             line = brinp.readLine();
             System.out.println("Line:" + line.length());
         }
-        System.out.println(threadName + "| Name, password, and PESEL: " + line);
+        System.out.println(threadName + "| Trying to register: Name, password, and PESEL: " + line);
         String[] parts = line.split(", ");
 
         if (parts.length == 4) {
@@ -178,12 +169,12 @@ public class EchoServerThread implements Runnable {
             }
 
             if (userExists) {
-                out.writeBytes("User with this PESEL already exists." + "\r");
-                out.flush();
+                writer.write("Użytkownik z tym numerem PESEL już istnieje." + System.lineSeparator());
+                writer.flush();
                 System.out.println(threadName + "| User with this PESEL already exists.");
             } else if (!isValidPesel(pesel)) {
-                out.writeBytes("Invalid PESEL format. PESEL must contain exactly 11 digits.\r");
-                out.flush();
+                writer.write("Niepoprawnie wpisano PESEL. PESEL powinien zawierać 11 cyfr." + System.lineSeparator());
+                writer.flush();
                 System.out.println(threadName + "| Invalid PESEL format.");
             } else {
                 try (FileWriter fw = new FileWriter("users.txt", true);
@@ -191,7 +182,7 @@ public class EchoServerThread implements Runnable {
                      PrintWriter pw = new PrintWriter(bw)) {
                     pw.println(name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0");
                     pw.flush();
-                    System.out.println(threadName + "| User added to the file.");
+                    System.out.println(threadName + "| User " + login + " added to the file.");
 
                     ArrayList<String> newUser = new ArrayList<>();
                     newUser.add(name);
@@ -205,45 +196,44 @@ public class EchoServerThread implements Runnable {
                     return;
                 }
 
-                out.writeBytes("User " + name + "registered temporarily" + "\r");
-                out.flush();
-                System.out.println(threadName + "| User registered temporarily.");
+                writer.write("Użytkownik " + name + " " + lastname + " został zarejestrowany." + System.lineSeparator());
+                writer.flush();
+                System.out.println(threadName + "| User registered.");
             }
         } else {
             System.out.println(threadName + "| Invalid data format. Required: name, lastname, PESEL, password");
-            out.writeBytes("Invalid data format. Required: name, lastname, PESEL, password" + "\r");
-            out.flush();
+            writer.write("Niepoprawne dane. Wymagane: imię, nazwisko, PESEL, hasło" + System.lineSeparator());
+            writer.flush();
         }
     }
 
-    private void sendUserList(DataOutputStream out) throws IOException {
+    private void sendUserList(BufferedWriter writer) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
             String currentLine;
-            StringBuilder userList = new StringBuilder();
+            StringJoiner userList = new StringJoiner(", ");
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
                 if (userData.length >= 1) {
-                    userList.append(userData[0]).append(", ");
+                    userList.add(userData[0]);
                 }
             }
-            out.writeBytes("Lista użytkowników: " + userList.toString().trim() + "\r");
-            out.flush();
+            writer.write("Lista użytkowników: " + userList.toString() + System.lineSeparator());
+            writer.flush();
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
     }
 
-    private void sendUserBalance(DataOutputStream out, String threadName, String login) throws IOException {
-
+    private void sendUserBalance(BufferedWriter writer, String threadName, String login) throws IOException {
         String userSaldo = findUserSaldo(login);
-        out.writeBytes("Środki na koncie: " + userSaldo + "\r");
-        out.flush();
-        System.out.println(threadName + "| User " + login + " has checked account balance. Balance: " + userSaldo);
+        writer.write("Środki na koncie: " + userSaldo + " PLN" + System.lineSeparator());
+        writer.flush();
+        System.out.println(threadName + "| User " + login + " has checked account balance. Balance: " + userSaldo + " PLN");
     }
 
-    private void handleDeposit(BufferedReader brinp, DataOutputStream out, String threadName, String login) throws IOException {
-        out.writeBytes("Wprowadź wartość do wpłacenia:" + "\r");
-        out.flush();
+    private void handleDeposit(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        writer.write("Wprowadź wartość do wpłacenia:" + System.lineSeparator());
+        writer.flush();
         System.out.println(threadName + "| Message sent: " + "Enter the amount to deposit:");
         String line = "";
         while (line.isEmpty()) {
@@ -266,20 +256,20 @@ public class EchoServerThread implements Runnable {
                 }
                 lines.add(currentLine);
             }
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter("users.txt"))) {
+            try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("users.txt"))) {
                 for (String writeLine : lines) {
-                    writer.write(writeLine + "\n");
+                    fileWriter.write(writeLine + System.lineSeparator());
                 }
             }
         }
-        out.writeBytes("Na konto wpłynęło " + depositAmount + ". Środki na koncie:" + saldo + "\r");
-        out.flush();
-        System.out.println(threadName + "| Deposit successful. New balance: " + saldo);
+        writer.write("Na konto wpłynęło " + depositAmount + ". Środki na koncie: " + saldo + " PLN" + System.lineSeparator());
+        writer.flush();
+        System.out.println(threadName + "| Deposit successful. New balance: " + saldo + " PLN");
     }
 
-    private void handleWithdrawal(BufferedReader brinp, DataOutputStream out, String threadName, String login) throws IOException {
-        out.writeBytes("Wprowadź wartość do wypłaty" + "\r");
-        out.flush();
+    private void handleWithdrawal(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        writer.write("Wprowadź wartość do wypłaty." + System.lineSeparator());
+        writer.flush();
         System.out.println(threadName + "| Message sent: " + "Enter the amount to withdraw:");
         String line = "";
         while (line.isEmpty()) {
@@ -291,9 +281,9 @@ public class EchoServerThread implements Runnable {
         double saldo = Double.parseDouble(userSaldo);
 
         if (withdrawAmount > saldo) {
-            out.writeBytes("Brak środków do wypłacenia." + "\r");
-            out.flush();
-            System.out.println(threadName + "| Insufficient funds.");
+            writer.write("Przekroczono ilość środków na koncie!" + System.lineSeparator());
+            writer.flush();
+            System.out.println(threadName + "| + User " + login + " has insufficient funds to withdraw + " + withdrawAmount + "PLN");
         } else {
             saldo -= withdrawAmount;
             try (BufferedReader file = new BufferedReader(new FileReader("users.txt"))) {
@@ -307,21 +297,21 @@ public class EchoServerThread implements Runnable {
                     }
                     lines.add(currentLine);
                 }
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter("users.txt"))) {
+                try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("users.txt"))) {
                     for (String writeLine : lines) {
-                        writer.write(writeLine + "\n");
+                        fileWriter.write(writeLine + System.lineSeparator());
                     }
                 }
             }
-            out.writeBytes("Wypłacono " + withdrawAmount + ". Pozostałe środki na koncie: " + saldo + "\r");
-            out.flush();
-            System.out.println(threadName + "| Withdrawal successful. New balance: " + saldo);
+            writer.write("Wypłacono " + withdrawAmount + ". Pozostałe środki na koncie: " + saldo + " PLN" + System.lineSeparator());
+            writer.flush();
+            System.out.println(threadName + "| Withdrawal successful. New balance: " + saldo + " PLN");
         }
     }
 
-    private void logout(DataOutputStream out, String threadName) throws IOException {
-        out.writeBytes("Wylogowano!\r");
-        out.flush();
+    private void logout(BufferedWriter writer, String threadName) throws IOException {
+        writer.write("Wylogowano!" + System.lineSeparator());
+        writer.flush();
         System.out.println(threadName + "| Logged out successfully.");
         login = null;
         isLoggedIn = false;
