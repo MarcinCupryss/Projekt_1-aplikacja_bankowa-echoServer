@@ -92,116 +92,125 @@ public class EchoServerThread implements Runnable {
     }
 
     private void handleLogin(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
+        boolean logLoop = false;
         System.out.println(threadName + "| User wants to log in.");
-        writer.write("Wprowadź login oraz hasło." + System.lineSeparator());
+        writer.write("Wprowadź login oraz hasło rozdzielone \", \"." + System.lineSeparator());
         writer.flush();
         System.out.println(threadName + "| Message sent: " + "Enter login and password:");
-        String line = brinp.readLine();
-        String[] parts = line.split(", ");
+        while (logLoop == false) {
+            String line = brinp.readLine();
+            String[] parts = line.split(", ");
 
-        if (parts.length == 2) {
-            String login = parts[0];
-            String password = parts[1];
+            if (parts.length == 2) {
+                String login = parts[0];
+                String password = parts[1];
 
-            boolean userExists = false;
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
-                String currentLine;
-                while ((currentLine = br.readLine()) != null) {
-                    String[] userData = currentLine.split(", ");
-                    if (userData.length >= 2 && userData[0].equals(login) && userData[3].equals(password)) {
-                        userExists = true;
-                        break;
+                boolean userExists = false;
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+                    String currentLine;
+                    while ((currentLine = br.readLine()) != null) {
+                        String[] userData = currentLine.split(", ");
+                        if (userData.length >= 2 && userData[0].equals(login) && userData[3].equals(password)) {
+                            userExists = true;
+                            break;
+                        }
                     }
+                } catch (IOException e) {
+                    System.err.println(threadName + "| Error reading file: " + e.getMessage());
                 }
-            } catch (IOException e) {
-                System.err.println(threadName + "| Error reading file: " + e.getMessage());
-            }
 
-            if (userExists) {
-                writer.write("Zalogowano!" + System.lineSeparator());
-                writer.flush();
-                System.out.println(threadName + "| User " + login + " has logged in.");
-                setLogin(login);
-                isLoggedIn = true;
+                if (userExists) {
+                    writer.write("Zalogowano!" + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User " + login + " has logged in.");
+                    setLogin(login);
+                    isLoggedIn = true;
+                    logLoop = true;
+                } else {
+                    writer.write("Niepoprawnie wpisano login/hasło, wprowadź login oraz hasło rozdzielone \", \"." + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User has put incorrect login and/or password.");
+                }
             } else {
-                writer.write("Niepoprawnie wpisano login/hasło." + System.lineSeparator()); // Try again
+                System.out.println(threadName + "| Invalid data format. Required: login, password.");
+                writer.write("Niepoprawny format danych, wprowadź login oraz hasło rozdzielone \", \"." + System.lineSeparator());
                 writer.flush();
-                System.out.println(threadName + "| User has put incorrect login and/or password.");
             }
-        } else {
-            System.out.println(threadName + "| Invalid data format. Required: login, password.");
-            writer.write("Niepoprawny format danych, wprowadź login oraz hasło rozdzielone \", \"." + System.lineSeparator());
-            writer.flush();
         }
+
     }
 
     private void handleRegistration(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
+        boolean registerLoop = false;
         writer.write("Podaj imię, nazwisko, PESEL, hasło rozdzielone \", \":" + System.lineSeparator());
         writer.flush();
         System.out.println(threadName + "| Line sent: " + "Enter name, lastname, PESEL and password:");
-        String line = "";
-        while (line.length() < 1) {
-            line = brinp.readLine();
-        }
-        System.out.println(threadName + "| Trying to register: " + line);
-        String[] parts = line.split(", ");
+        while (registerLoop == false) {
+            String line = "";
+            while (line.length() < 1) {
+                line = brinp.readLine();
+            }
+            System.out.println(threadName + "| Trying to register: " + line);
+            String[] parts = line.split(", ");
 
-        if (parts.length == 4) {
-            String name = parts[0];
-            String lastname = parts[1];
-            String pesel = parts[2];
-            String password = parts[3];
+            if (parts.length == 4) {
+                String name = parts[0];
+                String lastname = parts[1];
+                String pesel = parts[2];
+                String password = parts[3];
 
-            boolean userExists = false;
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
-                String currentLine;
-                while ((currentLine = br.readLine()) != null) {
-                    String[] userData = currentLine.split(", ");
-                    if (userData.length >= 4 && userData[2].equals(pesel)) {
-                        userExists = true;
-                        break;
+                boolean userExists = false;
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+                    String currentLine;
+                    while ((currentLine = br.readLine()) != null) {
+                        String[] userData = currentLine.split(", ");
+                        if (userData.length >= 4 && userData[2].equals(pesel)) {
+                            userExists = true;
+                            break;
+                        }
                     }
-                }
-            } catch (IOException e) {
-                System.err.println(threadName + "| Error reading file: " + e.getMessage());
-            }
-
-            if (userExists) {
-                writer.write("Użytkownik z tym numerem PESEL już istnieje." + System.lineSeparator());
-                writer.flush();
-                System.out.println(threadName + "| User with this PESEL already exists.");
-            } else if (!isValidPesel(pesel)) {
-                writer.write("Niepoprawnie wpisano PESEL. PESEL powinien zawierać 11 cyfr." + System.lineSeparator());
-                writer.flush();
-                System.out.println(threadName + "| Invalid PESEL format.");
-            } else {
-                try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("users.txt", true), StandardCharsets.UTF_8);
-                     BufferedWriter bw = new BufferedWriter(osw);
-                     PrintWriter pw = new PrintWriter(bw)) {
-                    pw.println(name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0");
-                    pw.flush();
-                    System.out.println(threadName + "| User " + name + " added to the file.");
-
-                    ArrayList<String> newUser = new ArrayList<>();
-                    newUser.add(name);
-                    newUser.add(lastname);
-                    newUser.add(pesel);
-                    newUser.add(password);
-                    newUser.add("0.0");
-                    logins.add(newUser); // Dodanie nowego użytkownika do listy zalogowanych
                 } catch (IOException e) {
-                    System.err.println(threadName + "| Error writing to file: " + e.getMessage());
-                    return;
+                    System.err.println(threadName + "| Error reading file: " + e.getMessage());
                 }
 
-                writer.write("Użytkownik " + name + " " + lastname + " został zarejestrowany." + System.lineSeparator());
+                if (userExists) {
+                    writer.write("Użytkownik z tym numerem PESEL już istnieje." + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User with this PESEL already exists.");
+                } else if (!isValidPesel(pesel)) {
+                    writer.write("Niepoprawnie wpisano PESEL. PESEL powinien zawierać 11 cyfr." + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| Invalid PESEL format.");
+                } else {
+                    try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("users.txt", true), StandardCharsets.UTF_8);
+                         BufferedWriter bw = new BufferedWriter(osw);
+                         PrintWriter pw = new PrintWriter(bw)) {
+                        pw.println(name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0");
+                        pw.flush();
+                        System.out.println(threadName + "| User " + name + " added to the file.");
+
+                        ArrayList<String> newUser = new ArrayList<>();
+                        newUser.add(name);
+                        newUser.add(lastname);
+                        newUser.add(pesel);
+                        newUser.add(password);
+                        newUser.add("0.0");
+                        logins.add(newUser); // Dodanie nowego użytkownika do listy zalogowanych
+                    } catch (IOException e) {
+                        System.err.println(threadName + "| Error writing to file: " + e.getMessage());
+                        return;
+                    }
+
+                    writer.write("Użytkownik " + name + " " + lastname + " został zarejestrowany." + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User registered.");
+                    registerLoop = true;
+                }
+            } else {
+                System.out.println(threadName + "| Invalid data format. Required: name, lastname, PESEL, password");
+                writer.write("Niepoprawne dane. Wymagane: imię, nazwisko, PESEL, hasło" + System.lineSeparator());
                 writer.flush();
-                System.out.println(threadName + "| User registered.");
             }
-        } else {
-            System.out.println(threadName + "| Invalid data format. Required: name, lastname, PESEL, password");
-            writer.write("Niepoprawne dane. Wymagane: imię, nazwisko, PESEL, hasło" + System.lineSeparator());
-            writer.flush();
         }
     }
 
