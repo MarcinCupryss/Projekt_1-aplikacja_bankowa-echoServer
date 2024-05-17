@@ -6,7 +6,6 @@ import java.io.*;
 public class EchoServer {
 
     public static void main(String[] args) {
-//        CopyOnWriteArrayList<ArrayList<String>> logins = new CopyOnWriteArrayList<>();
         ServerSocket serverSocket = null; // Do akceptowania połączeń i przekazywania ich dalej
         Socket socket = null; // Nawiązywanie połączenia z konkretnym użytkownikiem
         try {

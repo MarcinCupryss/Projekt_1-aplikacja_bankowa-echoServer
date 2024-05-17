@@ -26,7 +26,7 @@ public class EchoServerThread implements Runnable {
         String threadName = Thread.currentThread().getName();
 
         try {
-            brinp = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            brinp = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
         } catch (IOException e) {
             System.out.println(threadName + "| Błąd przy tworzeniu strumieni " + e);
@@ -97,7 +97,6 @@ public class EchoServerThread implements Runnable {
         writer.flush();
         System.out.println(threadName + "| Message sent: " + "Enter login and password:");
         String line = brinp.readLine();
-//        System.out.println(threadName + "| User entered login and password " + line);
         String[] parts = line.split(", ");
 
         if (parts.length == 2) {
@@ -105,7 +104,7 @@ public class EchoServerThread implements Runnable {
             String password = parts[1];
 
             boolean userExists = false;
-            try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
                 String currentLine;
                 while ((currentLine = br.readLine()) != null) {
                     String[] userData = currentLine.split(", ");
@@ -137,15 +136,14 @@ public class EchoServerThread implements Runnable {
     }
 
     private void handleRegistration(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
-        writer.write("Podaj imię, nazwisko, PESEL, hasło rozdzielone \" ,\":" + System.lineSeparator());
+        writer.write("Podaj imię, nazwisko, PESEL, hasło rozdzielone \", \":" + System.lineSeparator());
         writer.flush();
         System.out.println(threadName + "| Line sent: " + "Enter name, lastname, PESEL and password:");
         String line = "";
         while (line.length() < 1) {
             line = brinp.readLine();
-            System.out.println("Line:" + line.length());
         }
-        System.out.println(threadName + "| Trying to register: Name, password, and PESEL: " + line);
+        System.out.println(threadName + "| Trying to register: " + line);
         String[] parts = line.split(", ");
 
         if (parts.length == 4) {
@@ -155,7 +153,7 @@ public class EchoServerThread implements Runnable {
             String password = parts[3];
 
             boolean userExists = false;
-            try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
                 String currentLine;
                 while ((currentLine = br.readLine()) != null) {
                     String[] userData = currentLine.split(", ");
@@ -177,12 +175,12 @@ public class EchoServerThread implements Runnable {
                 writer.flush();
                 System.out.println(threadName + "| Invalid PESEL format.");
             } else {
-                try (FileWriter fw = new FileWriter("users.txt", true);
-                     BufferedWriter bw = new BufferedWriter(fw);
+                try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("users.txt", true), StandardCharsets.UTF_8);
+                     BufferedWriter bw = new BufferedWriter(osw);
                      PrintWriter pw = new PrintWriter(bw)) {
                     pw.println(name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0");
                     pw.flush();
-                    System.out.println(threadName + "| User " + login + " added to the file.");
+                    System.out.println(threadName + "| User " + name + " added to the file.");
 
                     ArrayList<String> newUser = new ArrayList<>();
                     newUser.add(name);
@@ -208,17 +206,23 @@ public class EchoServerThread implements Runnable {
     }
 
     private void sendUserList(BufferedWriter writer) throws IOException {
-        try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String currentLine;
             StringJoiner userList = new StringJoiner(", ");
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 1) {
+                if (userData.length >= 1 && !userData[0].isEmpty()) {
                     userList.add(userData[0]);
                 }
             }
-            writer.write("Lista użytkowników: " + userList.toString() + System.lineSeparator());
-            writer.flush();
+            String userListString = userList.toString();
+            if (!userListString.isEmpty()) {
+                writer.write("Lista użytkowników: " + userListString + System.lineSeparator());
+                writer.flush();
+            } else {
+                writer.write("Lista użytkowników jest pusta." + System.lineSeparator());
+                writer.flush();
+            }
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
@@ -245,7 +249,7 @@ public class EchoServerThread implements Runnable {
         double saldo = Double.parseDouble(userSaldo);
 
         saldo += depositAmount;
-        try (BufferedReader file = new BufferedReader(new FileReader("users.txt"))) {
+        try (BufferedReader file = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             List<String> lines = new ArrayList<>();
             String currentLine;
             while ((currentLine = file.readLine()) != null) {
@@ -256,7 +260,7 @@ public class EchoServerThread implements Runnable {
                 }
                 lines.add(currentLine);
             }
-            try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("users.txt"))) {
+            try (BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
                 for (String writeLine : lines) {
                     fileWriter.write(writeLine + System.lineSeparator());
                 }
@@ -283,10 +287,10 @@ public class EchoServerThread implements Runnable {
         if (withdrawAmount > saldo) {
             writer.write("Przekroczono ilość środków na koncie!" + System.lineSeparator());
             writer.flush();
-            System.out.println(threadName + "| + User " + login + " has insufficient funds to withdraw + " + withdrawAmount + "PLN");
+            System.out.println(threadName + "| + User " + login + " has insufficient funds to withdraw + " + withdrawAmount + " PLN");
         } else {
             saldo -= withdrawAmount;
-            try (BufferedReader file = new BufferedReader(new FileReader("users.txt"))) {
+            try (BufferedReader file = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
                 List<String> lines = new ArrayList<>();
                 String currentLine;
                 while ((currentLine = file.readLine()) != null) {
@@ -297,7 +301,7 @@ public class EchoServerThread implements Runnable {
                     }
                     lines.add(currentLine);
                 }
-                try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("users.txt"))) {
+                try (BufferedWriter fileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
                     for (String writeLine : lines) {
                         fileWriter.write(writeLine + System.lineSeparator());
                     }
@@ -318,7 +322,7 @@ public class EchoServerThread implements Runnable {
     }
 
     private String findUserSaldo(String login) {
-        try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
@@ -340,7 +344,4 @@ public class EchoServerThread implements Runnable {
         this.login = login;
     }
 
-//    private String getLogin() {
-//        return login;
-//    }
 }
