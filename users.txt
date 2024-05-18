@@ -1,3 +1,2 @@
-Marcin, Cuprys, 95011301234, pass, 4920.35
-Piotr, Nowak, 99123101234, haslo, 5.0
-Jan, Kowalski, 12312312312, pass, 0.0
+23133807, adam123, Adam, Kowalski, 00000000000, pass, 0.0
+70129911, Żółw, Fabian, Gżegżółka, 99999989898, pass, 0.0
