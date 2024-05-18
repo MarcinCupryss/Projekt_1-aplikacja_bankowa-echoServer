@@ -38,21 +38,21 @@ public class EchoServerThread implements Runnable {
                 System.out.println(threadName + "| Line read: " + line);
 
                 if (isLoggedIn) {
-                    if ("saldo".equals(line)) {
+                    if ("saldo".equals(line) || "balance".equals(line)) {
                         sendUserBalance(writer, threadName, login);
-                    } else if ("wplata".equals(line)) {
+                    } else if ("wplata".equals(line) || "wpłata".equals(line) || "deposit".equals(line)) {
                         handleDeposit(brinp, writer, threadName, login);
-                    } else if ("wyplata".equals(line)) {
+                    } else if ("wyplata".equals(line) || "wypłata".equals(line) || "withdraw".equals(line)) {
                         handleWithdrawal(brinp, writer, threadName, login);
-                    } else if ("przelew".equals(line)) {
+                    } else if ("przelew".equals(line) || "transfer".equals(line)) {
                         // Obsługa przelewu
-                    } else if ("wyloguj".equals(line)) {
+                    } else if ("wyloguj".equals(line) || "logout".equals(line)) {
                         logout(writer, threadName);
-                    } else if ("dane".equals(line)) {
+                    } else if ("dane".equals(line) || "info".equals(line)) {
                         showUserInfo(writer, threadName, login);
-                    } else if ("haslo".equals(line)) {
+                    } else if ("haslo".equals(line) || "password".equals(line)) {
                         changePassword(brinp, writer, threadName, login);
-                    } else if ("komendy".equals(line)) {
+                    } else if ("komendy".equals(line) || "commands".equals(line)) {
                         getCommands(writer);
                         System.out.println(threadName + "| User " + login + " got commands list.");
                     } else {
@@ -60,13 +60,13 @@ public class EchoServerThread implements Runnable {
                         writer.flush();
                         System.out.println(threadName + "| Invalid operation.");
                     }
-                } else if ("zaloguj".equals(line)) {
+                } else if ("zaloguj".equals(line) || "login".equals(line)) {
                     handleLogin(brinp, writer, threadName);
-                } else if ("rejestracja".equals(line)) {
+                } else if ("rejestracja".equals(line) || "register".equals(line)) {
                     handleRegistration(brinp, writer, threadName);
-                } else if ("lista".equals(line)) {
+                } else if ("lista".equals(line) || "list".equals(line)) {
                     sendUserList(threadName, writer);
-                } else if ("komendy".equals(line)) {
+                } else if ("komendy".equals(line) || "commands".equals(line)) {
                     getCommands(writer);
                     System.out.println(threadName + "| Sending commands list.");
                 } else {
