@@ -65,7 +65,7 @@ public class EchoServerThread implements Runnable {
                 } else if ("rejestracja".equals(line)) {
                     handleRegistration(brinp, writer, threadName);
                 } else if ("lista".equals(line)) {
-                    sendUserList(writer);
+                    sendUserList(threadName, writer);
                 } else if ("komendy".equals(line)) {
                     getCommands(writer);
                     System.out.println(threadName + "| Sending commands list.");
@@ -94,6 +94,7 @@ public class EchoServerThread implements Runnable {
     }
 
     private void handleLogin(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
+        System.out.println(threadName + "| User wants to log in.");
         boolean logLoop = true;
         String login, password;
         writer.write("Podaj login (lub wpisz 'anuluj' aby przerwać): " + System.lineSeparator());
@@ -106,6 +107,7 @@ public class EchoServerThread implements Runnable {
             if ("anuluj".equalsIgnoreCase(login)) {
                 writer.write("Logowanie anulowane." + System.lineSeparator());
                 writer.flush();
+                System.out.println(threadName + "| User has cancelled logging in");
                 return;
             }
 
@@ -116,6 +118,7 @@ public class EchoServerThread implements Runnable {
             if ("anuluj".equalsIgnoreCase(password)) {
                 writer.write("Logowanie anulowane." + System.lineSeparator());
                 writer.flush();
+                System.out.println(threadName + "| User has cancelled logging in");
                 return;
             }
 
@@ -150,6 +153,7 @@ public class EchoServerThread implements Runnable {
     }
 
     private void handleRegistration(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {
+        System.out.println(threadName + "| User wants to register a new account");
         boolean registerLoop = true;
 
         String login, name, lastname, pesel = "", password = "", confirmPassword, accountNumber;
@@ -158,7 +162,7 @@ public class EchoServerThread implements Runnable {
             writer.write("Podaj login: " + System.lineSeparator());
             writer.flush();
             login = brinp.readLine().trim();
-            if (isLoginTaken(login)) {
+            if (isLoginTaken(threadName, login)) {
                 writer.write("Ten login jest już zajęty. Wybierz inny." + System.lineSeparator());
                 writer.flush();
                 continue;
@@ -201,6 +205,7 @@ public class EchoServerThread implements Runnable {
             }
 
             accountNumber = generateUniqueAccountNumber();
+            System.out.println(threadName + "| Completed collecting information for registration");
 
             try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt", true), StandardCharsets.UTF_8))) {
                 bw.write(accountNumber + ", " + login + ", " + name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0" + System.lineSeparator());
@@ -216,7 +221,8 @@ public class EchoServerThread implements Runnable {
         }
     }
 
-    private boolean isLoginTaken(String login) {
+    private boolean isLoginTaken(String threadName, String login) {
+        System.out.println(threadName + "| Checking if new user login is already taken");
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
@@ -231,7 +237,8 @@ public class EchoServerThread implements Runnable {
         return false;
     }
 
-    private void sendUserList(BufferedWriter writer) throws IOException {
+    private void sendUserList(String threadName, BufferedWriter writer) throws IOException {
+        System.out.println(threadName + "| Sending list of the accounts");
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String currentLine;
             StringJoiner userList = new StringJoiner(", ");
@@ -255,6 +262,7 @@ public class EchoServerThread implements Runnable {
     }
 
     private void sendUserBalance(BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to check account balance");
         String userSaldo = findUserSaldo(login);
         writer.write("Środki na koncie: " + userSaldo + " PLN" + System.lineSeparator());
         writer.flush();
@@ -262,6 +270,7 @@ public class EchoServerThread implements Runnable {
     }
 
     private void handleDeposit(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to deposit money");
         boolean validAmount = false;
         double depositAmount = 0;
         writer.write("Wprowadź wartość do wpłacenia:" + System.lineSeparator());
@@ -286,9 +295,11 @@ public class EchoServerThread implements Runnable {
         updateUserSaldo(login, saldo);
         writer.write(String.format("Na twoje konto wpłynęło: %.2f PLN. Obecny stan konta: %.2f PLN.%n", depositAmount, saldo)); // IDE requires this way
         writer.flush();
+        System.out.println(threadName + "| " + login + " has deposited money");
     }
 
     private void handleWithdrawal(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to withdraw money");
         boolean validAmount = false;
         double withdrawAmount = 0;
         writer.write("Wprowadź wartość do wypłacenia:" + System.lineSeparator());
@@ -317,20 +328,20 @@ public class EchoServerThread implements Runnable {
             writer.write("Niewystarczające środki na koncie." + System.lineSeparator());
         }
         writer.flush();
+        System.out.println(threadName + "| " + login + " has withdrawn money");
     }
 
     private void changePassword(BufferedReader brinp, BufferedWriter writer, String threadName, String currentUserLogin) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to change password");
         String currentPassword, newPassword, confirmNewPassword;
         List<String> lines = new ArrayList<>();
 
-        // Poproś o obecne hasło
         writer.write("Podaj obecne hasło: " + System.lineSeparator());
         writer.flush();
         currentPassword = brinp.readLine().trim();
 
         boolean passwordCorrect = false;
 
-        // Odczytaj wszystkie linie z pliku i sprawdź obecne hasło
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -353,7 +364,6 @@ public class EchoServerThread implements Runnable {
             return;
         }
 
-        // Poproś o nowe hasło i jego potwierdzenie
         writer.write("Podaj nowe hasło: " + System.lineSeparator());
         writer.flush();
         newPassword = brinp.readLine().trim();
@@ -361,7 +371,6 @@ public class EchoServerThread implements Runnable {
         writer.flush();
         confirmNewPassword = brinp.readLine().trim();
 
-        // Sprawdź, czy nowe hasła są zgodne
         if (!newPassword.equals(confirmNewPassword)) {
             writer.write("Nowe hasła nie są zgodne. Spróbuj ponownie." + System.lineSeparator());
             writer.flush();
@@ -384,9 +393,11 @@ public class EchoServerThread implements Runnable {
 
         writer.write("Hasło zostało zmienione pomyślnie." + System.lineSeparator());
         writer.flush();
+        System.out.println(threadName + "| " + login + " has set a new password");
     }
 
     private void showUserInfo(BufferedWriter writer, String threadName, String currentUserLogin) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to see his account information");
         String info = "";
         boolean userFound = false;
 
@@ -418,9 +429,11 @@ public class EchoServerThread implements Runnable {
             writer.write("Nie znaleziono informacji o użytkowniku." + System.lineSeparator());
         }
         writer.flush();
+        System.out.println(threadName + "| " + login + " got his account informations");
     }
 
     private void logout(BufferedWriter writer, String threadName) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to log out");
         writer.write("Wylogowano!" + System.lineSeparator());
         writer.flush();
         System.out.println(threadName + "| Logged out successfully.");
