@@ -4,18 +4,15 @@ import java.net.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EchoServerThread implements Runnable {
 
     protected Socket socket;
-    CopyOnWriteArrayList<ArrayList<String>> logins;
     private String login;
     private boolean isLoggedIn = false;
 
     public EchoServerThread(Socket clientSocket) {
         this.socket = clientSocket;
-        this.logins = new CopyOnWriteArrayList<>();
     }
 
     public void run() {
@@ -101,9 +98,7 @@ public class EchoServerThread implements Runnable {
         writer.flush();
 
         while (logLoop) {
-
             login = brinp.readLine().trim();
-
             if ("anuluj".equalsIgnoreCase(login)) {
                 writer.write("Logowanie anulowane." + System.lineSeparator());
                 writer.flush();
@@ -114,7 +109,6 @@ public class EchoServerThread implements Runnable {
             writer.write("Podaj hasło: " + System.lineSeparator());
             writer.flush();
             password = brinp.readLine().trim();
-
             if ("anuluj".equalsIgnoreCase(password)) {
                 writer.write("Logowanie anulowane." + System.lineSeparator());
                 writer.flush();
@@ -123,7 +117,6 @@ public class EchoServerThread implements Runnable {
             }
 
             boolean userExists = false;
-
             try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
                 String currentLine;
                 while ((currentLine = br.readLine()) != null) {
@@ -156,7 +149,7 @@ public class EchoServerThread implements Runnable {
         System.out.println(threadName + "| User wants to register a new account");
         boolean registerLoop = true;
 
-        String login, name, lastname, pesel = "", password = "", confirmPassword, accountNumber;
+        String login, name, lastname, pesel = "", password = "", confirmPassword, accountNumber, pin = "";
 
         while (registerLoop) {
             writer.write("Podaj login: " + System.lineSeparator());
@@ -175,17 +168,17 @@ public class EchoServerThread implements Runnable {
             writer.flush();
             lastname = brinp.readLine().trim();
 
-            boolean isPESELGood = false;
+            boolean isPeselValid = false;
             writer.write("Podaj PESEL: " + System.lineSeparator());
             writer.flush();
-            while (!isPESELGood) {
+            while (!isPeselValid) {
                 pesel = brinp.readLine().trim();
-                if (!isValidPesel(pesel)) {
+                if (!pesel.matches("\\d{11}")) {
                     writer.write("Niepoprawny PESEL. PESEL powinien zawierać 11 cyfr." + System.lineSeparator());
                     writer.flush();
                     continue;
                 }
-                isPESELGood = true;
+                isPeselValid = true;
             }
 
             boolean doPasswordsMatch = false;
@@ -204,11 +197,26 @@ public class EchoServerThread implements Runnable {
                 }
             }
 
+            boolean isPinValid = false;
+            writer.write("Podaj numer PIN: " + System.lineSeparator());
+            writer.flush();
+            while (!isPinValid) {
+                pin = brinp.readLine().trim();
+                if (!pin.matches("\\d{4}")) {
+                    writer.write("Niepoprawny PIN. PIN powinien zawierać 4 cyfry." + System.lineSeparator());
+                    writer.flush();
+                    continue;
+                }
+                isPinValid = true;
+            }
+
             accountNumber = generateUniqueAccountNumber();
             System.out.println(threadName + "| Completed collecting information for registration");
 
-            try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt", true), StandardCharsets.UTF_8))) {
-                bw.write(accountNumber + ", " + login + ", " + name + ", " + lastname + ", " + pesel + ", " + password + ", 0.0" + System.lineSeparator());
+            try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream("users.txt", true), StandardCharsets.UTF_8))) {
+                bw.write(accountNumber + ", " + login + ", " + name + ", " + lastname + ", " + pesel +
+                         ", " + password + ", 0.0, " + pin + System.lineSeparator());
             } catch (IOException e) {
                 System.err.println(threadName + "| Error writing to file: " + e.getMessage());
                 return;
@@ -263,7 +271,7 @@ public class EchoServerThread implements Runnable {
 
     private void sendUserBalance(BufferedWriter writer, String threadName, String login) throws IOException {
         System.out.println(threadName + "| " + login + " wants to check account balance");
-        String userSaldo = findUserSaldo(login);
+        String userSaldo = findUserBalance(login);
         writer.write("Środki na koncie: " + userSaldo + " PLN" + System.lineSeparator());
         writer.flush();
         System.out.println(threadName + "| User " + login + " has checked account balance. Balance: " + userSaldo + " PLN");
@@ -288,11 +296,11 @@ public class EchoServerThread implements Runnable {
             }
         }
 
-        String userSaldo = findUserSaldo(login);
+        String userSaldo = findUserBalance(login);
         double saldo = Double.parseDouble(userSaldo);
         saldo += depositAmount;
 
-        updateUserSaldo(login, saldo);
+        updateUserBalance(login, saldo);
         writer.write(String.format("Na twoje konto wpłynęło: %.2f PLN. Obecny stan konta: %.2f PLN.%n", depositAmount, saldo)); // IDE requires this way
         writer.flush();
         System.out.println(threadName + "| " + login + " has deposited money");
@@ -316,19 +324,28 @@ public class EchoServerThread implements Runnable {
             }
         }
 
-        String userSaldo = findUserSaldo(login);
+        String userSaldo = findUserBalance(login);
         double saldo = Double.parseDouble(userSaldo);
+        boolean passedPinRequirement = true;
 
-        if (saldo >= withdrawAmount) {
+        if (withdrawAmount >= 100) {
+            System.out.println(threadName + "| " + login + " wants to withdraw >= 100 PLN. Asking for PIN.");
+            passedPinRequirement = gotCorrectPin(brinp, writer, threadName, login, findUserPin(login));
+        }
+
+        if (saldo >= withdrawAmount && passedPinRequirement) {
             saldo -= withdrawAmount;
-            updateUserSaldo(login, saldo);
+            updateUserBalance(login, saldo);
 
             writer.write("Wypłacono: " + withdrawAmount + " PLN. Obecny stan konta: " + saldo + " PLN." + System.lineSeparator());
+            System.out.println(threadName + "| " + login + " has withdrawn money");
+        } else if (!passedPinRequirement) {
+            writer.write("Trzykrotnie wprowadzono niepoprawny PIN. Wypłata została anulowana." + System.lineSeparator());
         } else {
             writer.write("Niewystarczające środki na koncie." + System.lineSeparator());
         }
         writer.flush();
-        System.out.println(threadName + "| " + login + " has withdrawn money");
+
     }
 
     private void changePassword(BufferedReader brinp, BufferedWriter writer, String threadName, String currentUserLogin) throws IOException {
@@ -412,9 +429,10 @@ public class EchoServerThread implements Runnable {
                     String lastname = userData[3];
                     String pesel = userData[4];
                     String balance = userData[6];
+                    String pin = userData[7];
 
-                    info = String.format("Twoje dane (Numer konta - %s, Login - %s, Imię - %s, Nazwisko - %s, PESEL - %s, Saldo - %s PLN)",
-                            accountNumber, login, name, lastname, pesel, balance);
+                    info = String.format("Twoje dane (Numer konta - %s, Login - %s, Imię - %s, Nazwisko - %s, PESEL - %s, Saldo - %s PLN), PIN - %s",
+                            accountNumber, login, name, lastname, pesel, balance, pin);
                     userFound = true;
                     break;
                 }
@@ -441,7 +459,7 @@ public class EchoServerThread implements Runnable {
         isLoggedIn = false;
     }
 
-    private String findUserSaldo(String login) {
+    private String findUserBalance(String login) {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
@@ -453,10 +471,58 @@ public class EchoServerThread implements Runnable {
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
-        return "0.0";
+        return null;
     }
 
-    private void updateUserSaldo(String login, double newSaldo) {
+    private String findUserPin(String login) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length >= 7 && userData[1].equals(login)) {
+                    return userData[7];
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private boolean gotCorrectPin(BufferedReader brinp, BufferedWriter writer, String threadName, String login, String filePin) throws IOException {
+        String pin;
+        if (filePin == null) {
+            writer.write("Nie znaleziono Twojego numeru PIN" + System.lineSeparator());
+            writer.flush();
+            return false;
+        }
+
+        writer.write("Podaj PIN: " + System.lineSeparator()); // Pierwszy raz pytamy
+        writer.flush();
+        pin = brinp.readLine().trim();
+        if (pin.equals(filePin)) {
+            return true;
+        }
+        System.out.println(threadName + "| User " + login + " failed to enter PIN. Fail counter: 1");
+        int attempts = 1;
+        while (attempts < 3) {
+            writer.write("Niepoprawny PIN. Spróbuj ponownie." + System.lineSeparator());
+            writer.flush();
+            pin = brinp.readLine().trim();
+
+            if (pin.equals(filePin)) {
+                return true;
+            } else {
+                attempts++;
+                System.out.println(threadName + "| User " + login + " failed to enter PIN. Fail counter: " + attempts);
+            }
+        }
+
+        System.out.println(threadName + "| User " + login + " has exceeded 3 tries to input PIN");
+        return false;
+    }
+
+    private void updateUserBalance(String login, double newSaldo) {
         try (BufferedReader file = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             List<String> lines = new ArrayList<>();
             String currentLine;
@@ -476,10 +542,6 @@ public class EchoServerThread implements Runnable {
         } catch (IOException e) {
             System.err.println("Error updating saldo: " + e.getMessage());
         }
-    }
-
-    private boolean isValidPesel(String pesel) {
-        return pesel.matches("\\d{11}");
     }
 
     private String generateUniqueAccountNumber() {
