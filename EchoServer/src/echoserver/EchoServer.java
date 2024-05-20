@@ -12,19 +12,19 @@ public class EchoServer {
             serverSocket = new ServerSocket(997);
         } catch (IOException e) {
             System.out.println(
-                    "Błąd przy tworzeniu gniazda serwerowego " + e);
+                    "Error creating server socket " + e);
             System.exit(-1);
         }
-        System.out.println("Inicjalizacja gniazda zakończona...");
-        System.out.println("Parametry gniazda: " + serverSocket);
+        System.out.println("Socket initialization completed...");
+        System.out.println("Socket parameters: " + serverSocket);
         while (true) {
             try {
                 socket = serverSocket.accept();
             } catch (IOException e) {
-                System.out.println("Błąd wejścia-wyjścia: " + e);
+                System.out.println("Input/Output Error: " + e);
             }
-            System.out.println("Nadeszło połączenie...");
-            System.out.println("Parametry połączenia: " + socket);
+            System.out.println("Connection received...");
+            System.out.println("Connection parameters: " + socket);
             new Thread(new EchoServerThread(socket)).start();
         }
     }

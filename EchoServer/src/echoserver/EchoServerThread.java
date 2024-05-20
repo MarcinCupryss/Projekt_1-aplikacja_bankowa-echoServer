@@ -42,7 +42,7 @@ public class EchoServerThread implements Runnable {
                     } else if ("wyplata".equals(line) || "wypłata".equals(line) || "withdraw".equals(line)) {
                         handleWithdrawal(brinp, writer, threadName, login);
                     } else if ("przelew".equals(line) || "transfer".equals(line)) {
-                        // Obsługa przelewu
+                        transferMoney(brinp, writer, threadName, login);
                     } else if ("wyloguj".equals(line) || "logout".equals(line)) {
                         logout(writer, threadName);
                     } else if ("dane".equals(line) || "info".equals(line)) {
@@ -324,8 +324,8 @@ public class EchoServerThread implements Runnable {
             }
         }
 
-        String userSaldo = findUserBalance(login);
-        double saldo = Double.parseDouble(userSaldo);
+        String userBalance = findUserBalance(login);
+        double balance = Double.parseDouble(userBalance);
         boolean passedPinRequirement = true;
 
         if (withdrawAmount >= 100) {
@@ -333,19 +333,87 @@ public class EchoServerThread implements Runnable {
             passedPinRequirement = gotCorrectPin(brinp, writer, threadName, login, findUserPin(login));
         }
 
-        if (saldo >= withdrawAmount && passedPinRequirement) {
-            saldo -= withdrawAmount;
-            updateUserBalance(login, saldo);
+        if (balance >= withdrawAmount && passedPinRequirement) {
+            balance -= withdrawAmount;
+            updateUserBalance(login, balance);
 
-            writer.write("Wypłacono: " + withdrawAmount + " PLN. Obecny stan konta: " + saldo + " PLN." + System.lineSeparator());
+            writer.write("Wypłacono: " + withdrawAmount + " PLN. Obecny stan konta: " + balance + " PLN." + System.lineSeparator());
             System.out.println(threadName + "| " + login + " has withdrawn money");
         } else if (!passedPinRequirement) {
-            writer.write("Trzykrotnie wprowadzono niepoprawny PIN. Wypłata została anulowana." + System.lineSeparator());
+            writer.write("Trzykrotnie wprowadzono niepoprawny PIN. Wypłata została anulowana. Wprowadź nową komendę." + System.lineSeparator());
         } else {
             writer.write("Niewystarczające środki na koncie." + System.lineSeparator());
         }
         writer.flush();
+    }
 
+    private void transferMoney(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to transfer money. Asking for transfer destination.");
+        boolean isReceiverAccountNumbValid = false;
+        String receiverAccountNumber = "";
+        String receiverLogin = "";
+        writer.write("Wprowadź numer konta bankowego, do którego chcesz zrobić przelew:" + System.lineSeparator());
+        writer.flush();
+
+        while (!isReceiverAccountNumbValid) {
+            receiverAccountNumber = brinp.readLine().trim();
+            if (!receiverAccountNumber.matches("\\d{8}")) {
+                System.out.println(threadName + "| " + login + " provided number that doesn't have 8 digits");
+                writer.write("Niepoprawny numer konta. Numer konta bankowego powinien zawierać 8 cyfr:" + System.lineSeparator());
+                writer.flush();
+                continue;
+            }
+            receiverLogin = findTransferReceiverLogin(writer, receiverAccountNumber, login, threadName);
+            if(receiverLogin == null){
+                System.out.println(threadName + "| " + login + " provided not existing destination.");
+                writer.write("Nie znaleziono użytkownika z takim numerem konta. Wprowadź poprawnie numer konta." + System.lineSeparator());
+                writer.flush();
+                continue;
+            }
+            isReceiverAccountNumbValid = true;
+        }
+
+        boolean validAmount = false;
+        double transferAmount = 0;
+        writer.write("Wprowadź kwotę przelewu:" + System.lineSeparator());
+        writer.flush();
+        while (!validAmount) {
+            System.out.println(threadName + "| Message sent: Enter the amount of money to transfer:");
+            String line = brinp.readLine().trim();
+            try {
+                transferAmount = Double.parseDouble(line);
+                validAmount = true;
+            } catch (NumberFormatException e) {
+                writer.write("Niepoprawna kwota. Wprowadź liczbę." + System.lineSeparator());
+                writer.flush();
+            }
+        }
+
+        String userSendingBalance = findUserBalance(login);
+        double balanceSender = Double.parseDouble(userSendingBalance);
+
+        String userReceivingBalance = findUserBalance(receiverLogin);
+        double balanceReceiver = Double.parseDouble(userReceivingBalance);
+
+        System.out.println(threadName + "| " + login + " wants to transfer money. Asking for pin");
+        boolean passedPinRequirement = gotCorrectPin(brinp, writer, threadName, login, findUserPin(login));
+
+
+        if (balanceSender >= transferAmount && passedPinRequirement) {
+            balanceSender -= transferAmount;
+            balanceReceiver += transferAmount;
+            updateUserBalance(login, balanceSender);
+            updateUserBalance(receiverLogin, balanceReceiver);
+
+            writer.write("Przelano: " + transferAmount + " PLN do " + receiverAccountNumber + " . Obecny stan konta: " +
+                         balanceSender + " PLN." + System.lineSeparator());
+            System.out.println(threadName + "| " + login + " has transfered money to " + receiverLogin);
+        } else if (!passedPinRequirement) {
+            writer.write("Trzykrotnie wprowadzono niepoprawny PIN. Przelew został anulowany. Wprowadź nową komendę." + System.lineSeparator());
+        } else {
+            writer.write("Niewystarczające środki na koncie." + System.lineSeparator());
+        }
+        writer.flush();
     }
 
     private void changePassword(BufferedReader brinp, BufferedWriter writer, String threadName, String currentUserLogin) throws IOException {
@@ -464,7 +532,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 7 && userData[1].equals(login)) {
+                if (userData.length == 8 && userData[1].equals(login)) {
                     return userData[6];
                 }
             }
@@ -479,7 +547,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 7 && userData[1].equals(login)) {
+                if (userData.length == 8 && userData[1].equals(login)) {
                     return userData[7];
                 }
             }
@@ -488,6 +556,23 @@ public class EchoServerThread implements Runnable {
         }
         return null;
     }
+
+    private String findTransferReceiverLogin(BufferedWriter writer, String receiverAccountNumber, String login, String threadName) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length == 8 && userData[0].equals(receiverAccountNumber)) {
+                    System.out.println(threadName + "| " + login + " provided correct destination.");
+                    return userData[1];
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        return null;
+    }
+
 
     private boolean gotCorrectPin(BufferedReader brinp, BufferedWriter writer, String threadName, String login, String filePin) throws IOException {
         String pin;
