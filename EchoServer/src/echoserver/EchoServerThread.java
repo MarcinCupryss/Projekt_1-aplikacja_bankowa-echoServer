@@ -53,6 +53,8 @@ public class EchoServerThread implements Runnable {
                         changeFirstName(brinp, writer, threadName, login);
                     } else if ("zmien nazwisko".equals(line) || "zmień nazwisko".equals(line) ||"change last name".equals(line)) {
                         changeLastName(brinp, writer, threadName, login);
+                    } else if ("zmien pesel".equals(line) || "zmień pesel".equals(line) ||"change id".equals(line)) {
+                        changePesel(brinp, writer, threadName, login);
                     } else if ("zmien haslo".equals(line) || "zmień hasło".equals(line) ||"change password".equals(line)) {
                         changePassword(brinp, writer, threadName, login);
                     } else if ("komendy".equals(line) || "commands".equals(line)) {
@@ -88,8 +90,8 @@ public class EchoServerThread implements Runnable {
     private void getCommands(BufferedWriter writer) throws IOException {
         String commands;
         if (isLoggedIn) {
-            commands = "Komendy do wyboru: dane, saldo, wpłata, wypłata, przelew, komendy, zmien login, zmien haslo, " +
-                       "zmien imie, zmien nazwisko, wyloguj";
+            commands = "Komendy do wyboru: dane, saldo, wpłata, wypłata, przelew, zmień login, " +
+                       "zmień imię, zmień nazwisko, zmień pesel, zmień hasło, komendy, wyloguj";
         } else {
             commands = "Komendy do wyboru: zaloguj, rejestracja, lista, komendy";
         }
@@ -663,6 +665,50 @@ public class EchoServerThread implements Runnable {
         }
 
         writer.write("Zmieniono nazwisko na " + newLastName + ". Wprowadź kolejną komendę." + System.lineSeparator());
+        writer.flush();
+    }
+
+    private void changePesel(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to change PESEL");
+        String newPesel = "";
+
+        boolean isPeselValid = false;
+        writer.write("Podaj nowy PESEL: " + System.lineSeparator());
+        writer.flush();
+        while (!isPeselValid) {
+            newPesel = brinp.readLine().trim();
+            if (!newPesel.matches("\\d{11}")) {
+                writer.write("Niepoprawny nowy PESEL. PESEL powinien zawierać 11 cyfr." + System.lineSeparator());
+                writer.flush();
+                continue;
+            }
+            isPeselValid = true;
+        }
+        List<String> users = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length == 8 && userData[1].equals(login)) {
+                    userData[4] = newPesel;
+                    currentLine = String.join(", ", userData);
+                    System.out.println(threadName + "| " + login + " has new last name - " + newPesel);
+                }
+                users.add(currentLine);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
+            for (String user : users) {
+                bw.write(user + System.lineSeparator());
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing file: " + e.getMessage());
+        }
+
+        writer.write("Zmieniono PESEL na " + newPesel + ". Wprowadź kolejną komendę." + System.lineSeparator());
         writer.flush();
     }
 
