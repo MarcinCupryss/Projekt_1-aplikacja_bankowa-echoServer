@@ -19,6 +19,7 @@ public class EchoServerThread implements Runnable {
         BufferedReader brinp = null;
         BufferedWriter writer = null;
         String threadName = Thread.currentThread().getName();
+        String line = null;
 
         try {
             brinp = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
@@ -27,7 +28,6 @@ public class EchoServerThread implements Runnable {
             System.out.println(threadName + "| Błąd przy tworzeniu strumieni " + e);
             return;
         }
-        String line = null;
 
         while (true) {
             try {
@@ -47,7 +47,13 @@ public class EchoServerThread implements Runnable {
                         logout(writer, threadName);
                     } else if ("dane".equals(line) || "info".equals(line)) {
                         showUserInfo(writer, threadName, login);
-                    } else if ("haslo".equals(line) || "password".equals(line)) {
+                    } else if ("zmien login".equals(line) || "zmień login".equals(line)|| "change login".equals(line)) {
+                        changeLogin(brinp, writer, threadName, login);
+                    } else if ("zmien imie".equals(line) || "zmień imię".equals(line)|| "change first name".equals(line)) {
+                        changeFirstName(brinp, writer, threadName, login);
+                    } else if ("zmien nazwisko".equals(line) || "zmień nazwisko".equals(line) ||"change last name".equals(line)) {
+                        changeLastName(brinp, writer, threadName, login);
+                    } else if ("zmien haslo".equals(line) || "zmień hasło".equals(line) ||"change password".equals(line)) {
                         changePassword(brinp, writer, threadName, login);
                     } else if ("komendy".equals(line) || "commands".equals(line)) {
                         getCommands(writer);
@@ -80,9 +86,10 @@ public class EchoServerThread implements Runnable {
     }
 
     private void getCommands(BufferedWriter writer) throws IOException {
-        String commands = "";
+        String commands;
         if (isLoggedIn) {
-            commands = "Komendy do wyboru: saldo, wplata, wyplata, przelew, komendy, haslo, wyloguj";
+            commands = "Komendy do wyboru: dane, saldo, wpłata, wypłata, przelew, komendy, zmien login, zmien haslo, " +
+                       "zmien imie, zmien nazwisko, wyloguj";
         } else {
             commands = "Komendy do wyboru: zaloguj, rejestracja, lista, komendy";
         }
@@ -297,6 +304,7 @@ public class EchoServerThread implements Runnable {
         }
 
         String userSaldo = findUserBalance(login);
+        assert userSaldo != null;
         double saldo = Double.parseDouble(userSaldo);
         saldo += depositAmount;
 
@@ -325,6 +333,7 @@ public class EchoServerThread implements Runnable {
         }
 
         String userBalance = findUserBalance(login);
+        assert userBalance != null;
         double balance = Double.parseDouble(userBalance);
         boolean passedPinRequirement = true;
 
@@ -363,7 +372,7 @@ public class EchoServerThread implements Runnable {
                 writer.flush();
                 continue;
             }
-            receiverLogin = findTransferReceiverLogin(writer, receiverAccountNumber, login, threadName);
+            receiverLogin = findTransferReceiverLogin(receiverAccountNumber, login, threadName);
             if(receiverLogin == null){
                 System.out.println(threadName + "| " + login + " provided not existing destination.");
                 writer.write("Nie znaleziono użytkownika z takim numerem konta. Wprowadź poprawnie numer konta." + System.lineSeparator());
@@ -390,9 +399,11 @@ public class EchoServerThread implements Runnable {
         }
 
         String userSendingBalance = findUserBalance(login);
+        assert userSendingBalance != null;
         double balanceSender = Double.parseDouble(userSendingBalance);
 
         String userReceivingBalance = findUserBalance(receiverLogin);
+        assert userReceivingBalance != null;
         double balanceReceiver = Double.parseDouble(userReceivingBalance);
 
         System.out.println(threadName + "| " + login + " wants to transfer money. Asking for pin");
@@ -462,12 +473,11 @@ public class EchoServerThread implements Runnable {
             return;
         }
 
-        // Zaktualizuj hasło dla zalogowanego użytkownika
         try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
             for (String line : lines) {
                 String[] userData = line.split(", ");
                 if (userData.length >= 7 && userData[1].equals(currentUserLogin)) {
-                    userData[5] = newPassword; // Zaktualizuj hasło
+                    userData[5] = newPassword;
                     line = String.join(", ", userData);
                 }
                 bw.write(line + System.lineSeparator());
@@ -557,7 +567,106 @@ public class EchoServerThread implements Runnable {
         return null;
     }
 
-    private String findTransferReceiverLogin(BufferedWriter writer, String receiverAccountNumber, String login, String threadName) {
+    private void changeLogin(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to change login");
+        writer.write("Wprowadź nowy login!" + System.lineSeparator());
+        writer.flush();
+        String newLogin = brinp.readLine().trim();
+        List<String> users = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length == 8 && userData[1].equals(login)) {
+                    userData[1] = newLogin;
+                    setLogin(newLogin);
+                    currentLine = String.join(", ", userData);
+                    System.out.println(threadName + "| " + login + " has new login - " + newLogin);
+                }
+                users.add(currentLine);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
+            for (String user : users) {
+                bw.write(user + System.lineSeparator());
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing file: " + e.getMessage());
+        }
+        writer.write("Zmieniono login na " + newLogin + ". Wprowadź kolejną komendę." + System.lineSeparator());
+        writer.flush();
+    }
+
+    private void changeFirstName(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to change first name");
+        writer.write("Wprowadź nowe imię!" + System.lineSeparator());
+        writer.flush();
+        String newFirstName = brinp.readLine().trim();
+        List<String> users = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length == 8 && userData[1].equals(login)) {
+                    userData[2] = newFirstName;
+                    currentLine = String.join(", ", userData);
+                    System.out.println(threadName + "| " + login + " has new first name - " + newFirstName);
+                }
+                users.add(currentLine);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
+            for (String user : users) {
+                bw.write(user + System.lineSeparator());
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing file: " + e.getMessage());
+        }
+
+        writer.write("Zmieniono imię na " + newFirstName + ". Wprowadź kolejną komendę." + System.lineSeparator());
+        writer.flush();
+    }
+
+    private void changeLastName(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
+        System.out.println(threadName + "| " + login + " wants to change last name");
+        writer.write("Wprowadź nowe nazwisko!" + System.lineSeparator());
+        writer.flush();
+        String newLastName = brinp.readLine().trim();
+        List<String> users = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+            String currentLine;
+            while ((currentLine = br.readLine()) != null) {
+                String[] userData = currentLine.split(", ");
+                if (userData.length == 8 && userData[1].equals(login)) {
+                    userData[3] = newLastName;
+                    currentLine = String.join(", ", userData);
+                    System.out.println(threadName + "| " + login + " has new last name - " + newLastName);
+                }
+                users.add(currentLine);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
+            for (String user : users) {
+                bw.write(user + System.lineSeparator());
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing file: " + e.getMessage());
+        }
+
+        writer.write("Zmieniono nazwisko na " + newLastName + ". Wprowadź kolejną komendę." + System.lineSeparator());
+        writer.flush();
+    }
+
+    private String findTransferReceiverLogin(String receiverAccountNumber, String login, String threadName) {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
@@ -572,7 +681,6 @@ public class EchoServerThread implements Runnable {
         }
         return null;
     }
-
 
     private boolean gotCorrectPin(BufferedReader brinp, BufferedWriter writer, String threadName, String login, String filePin) throws IOException {
         String pin;
