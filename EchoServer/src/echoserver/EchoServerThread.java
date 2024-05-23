@@ -47,15 +47,15 @@ public class EchoServerThread implements Runnable {
                         logout(writer, threadName);
                     } else if ("dane".equals(line) || "info".equals(line)) {
                         showUserInfo(writer, threadName, login);
-                    } else if ("zmien login".equals(line) || "zmień login".equals(line)|| "change login".equals(line)) {
+                    } else if ("zmien login".equals(line) || "zmień login".equals(line) || "change login".equals(line)) {
                         changeLogin(brinp, writer, threadName, login);
-                    } else if ("zmien imie".equals(line) || "zmień imię".equals(line)|| "change first name".equals(line)) {
+                    } else if ("zmien imie".equals(line) || "zmień imię".equals(line) || "change first name".equals(line)) {
                         changeFirstName(brinp, writer, threadName, login);
-                    } else if ("zmien nazwisko".equals(line) || "zmień nazwisko".equals(line) ||"change last name".equals(line)) {
+                    } else if ("zmien nazwisko".equals(line) || "zmień nazwisko".equals(line) || "change last name".equals(line)) {
                         changeLastName(brinp, writer, threadName, login);
-                    } else if ("zmien pesel".equals(line) || "zmień pesel".equals(line) ||"change id".equals(line)) {
+                    } else if ("zmien pesel".equals(line) || "zmień pesel".equals(line) || "change id".equals(line)) {
                         changePesel(brinp, writer, threadName, login);
-                    } else if ("zmien haslo".equals(line) || "zmień hasło".equals(line) ||"change password".equals(line)) {
+                    } else if ("zmien haslo".equals(line) || "zmień hasło".equals(line) || "change password".equals(line)) {
                         changePassword(brinp, writer, threadName, login);
                     } else if ("komendy".equals(line) || "commands".equals(line)) {
                         getCommands(writer);
@@ -295,10 +295,15 @@ public class EchoServerThread implements Runnable {
         while (!validAmount) {
             System.out.println(threadName + "| Message sent: Enter the amount to deposit:");
             String line = brinp.readLine().trim();
-
             try {
                 depositAmount = Double.parseDouble(line);
-                validAmount = true;
+                if (depositAmount > 0) {
+                    validAmount = true;
+                } else {
+                    writer.write("Wprowadź kwotę wyższą od 0!" + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User entered number lower or equal to 0:");
+                }
             } catch (NumberFormatException e) {
                 writer.write("Niepoprawna kwota. Wprowadź liczbę." + System.lineSeparator());
                 writer.flush();
@@ -327,9 +332,15 @@ public class EchoServerThread implements Runnable {
             String line = brinp.readLine().trim();
             try {
                 withdrawAmount = Double.parseDouble(line);
-                validAmount = true;
+                if (withdrawAmount > 0) {
+                    validAmount = true;
+                } else {
+                    writer.write("Wprowadź kwotę wyższą od 0!" + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User entered number lower or equal to 0:");
+                }
             } catch (NumberFormatException e) {
-                writer.write("Niepoprawna kwota. Wprowadź liczbę." + System.lineSeparator());
+                writer.write("Niepoprawna kwota." + System.lineSeparator());
                 writer.flush();
             }
         }
@@ -375,7 +386,7 @@ public class EchoServerThread implements Runnable {
                 continue;
             }
             receiverLogin = findTransferReceiverLogin(receiverAccountNumber, login, threadName);
-            if(receiverLogin == null){
+            if (receiverLogin == null) {
                 System.out.println(threadName + "| " + login + " provided not existing destination.");
                 writer.write("Nie znaleziono użytkownika z takim numerem konta. Wprowadź poprawnie numer konta." + System.lineSeparator());
                 writer.flush();
@@ -393,7 +404,13 @@ public class EchoServerThread implements Runnable {
             String line = brinp.readLine().trim();
             try {
                 transferAmount = Double.parseDouble(line);
-                validAmount = true;
+                if (transferAmount > 0) {
+                    validAmount = true;
+                } else {
+                    writer.write("Wprowadź kwotę wyższą od 0!" + System.lineSeparator());
+                    writer.flush();
+                    System.out.println(threadName + "| User entered number lower or equal to 0:");
+                }
             } catch (NumberFormatException e) {
                 writer.write("Niepoprawna kwota. Wprowadź liczbę." + System.lineSeparator());
                 writer.flush();
@@ -418,7 +435,7 @@ public class EchoServerThread implements Runnable {
             updateUserBalance(login, balanceSender);
             updateUserBalance(receiverLogin, balanceReceiver);
 
-            writer.write("Przelano: " + transferAmount + " PLN do " + receiverAccountNumber + " . Obecny stan konta: " +
+            writer.write("Przelano: " + transferAmount + " PLN do " + receiverAccountNumber + ". Obecny stan konta: " +
                          balanceSender + " PLN." + System.lineSeparator());
             System.out.println(threadName + "| " + login + " has transfered money to " + receiverLogin);
         } else if (!passedPinRequirement) {
