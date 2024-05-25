@@ -5,6 +5,12 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+/*
+Autorzy:
+Marcin Cupryś 89529
+Piotr Solecki 88349
+ */
+
 public class EchoServerThread implements Runnable {
 
     protected Socket socket;

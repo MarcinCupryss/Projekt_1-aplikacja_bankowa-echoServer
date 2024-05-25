@@ -3,6 +3,12 @@ package echoserver;
 import java.net.*;
 import java.io.*;
 
+/*
+Autorzy:
+Marcin Cupryś 89529
+Piotr Solecki 88349
+ */
+
 public class EchoServer {
 
     public static void main(String[] args) {
