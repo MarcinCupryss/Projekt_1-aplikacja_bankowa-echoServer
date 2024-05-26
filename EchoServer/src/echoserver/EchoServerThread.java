@@ -16,6 +16,7 @@ public class EchoServerThread implements Runnable {
     protected Socket socket;
     private String login;
     private boolean isLoggedIn = false;
+    private boolean isAdmin = false;
 
     public EchoServerThread(Socket clientSocket) {
         this.socket = clientSocket;
@@ -40,7 +41,28 @@ public class EchoServerThread implements Runnable {
                 line = brinp.readLine();
                 System.out.println(threadName + "| Line read: " + line);
 
-                if (isLoggedIn) {
+                if (isLoggedIn && isAdmin) {
+                    if ("zmien login".equals(line) || "zmień login".equals(line) || "change login".equals(line)) {
+                        changeLogin(brinp, writer, threadName);
+                    } else if ("zmien imie".equals(line) || "zmień imię".equals(line) || "change first name".equals(line)) {
+                        changeFirstName(brinp, writer, threadName);
+                    } else if ("zmien nazwisko".equals(line) || "zmień nazwisko".equals(line) || "change last name".equals(line)) {
+                        changeLastName(brinp, writer, threadName);
+                    } else if ("zmien pesel".equals(line) || "zmień pesel".equals(line) || "change id".equals(line)) {
+                        changePesel(brinp, writer, threadName);
+                    } else if ("zmien haslo".equals(line) || "zmień hasło".equals(line) || "change password".equals(line)) {
+                        changePassword(brinp, writer, threadName);
+                    } else if ("wyloguj".equals(line) || "logout".equals(line)) {
+                        logout(writer, threadName);
+                    } else if ("komendy".equals(line) || "commands".equals(line)) {
+                        getCommands(writer);
+                        System.out.println(threadName + "| User " + login + " got commands list.");
+                    } else {
+                        writer.write("Niepoprawna komenda!" + System.lineSeparator());
+                        writer.flush();
+                        System.out.println(threadName + "| Invalid operation.");
+                    }
+                } else if (isLoggedIn && !isAdmin) {
                     if ("saldo".equals(line) || "balance".equals(line)) {
                         sendUserBalance(writer, threadName, login);
                     } else if ("wplata".equals(line) || "wpłata".equals(line) || "deposit".equals(line)) {
@@ -53,16 +75,6 @@ public class EchoServerThread implements Runnable {
                         logout(writer, threadName);
                     } else if ("dane".equals(line) || "info".equals(line)) {
                         showUserInfo(writer, threadName, login);
-                    } else if ("zmien login".equals(line) || "zmień login".equals(line) || "change login".equals(line)) {
-                        changeLogin(brinp, writer, threadName, login);
-                    } else if ("zmien imie".equals(line) || "zmień imię".equals(line) || "change first name".equals(line)) {
-                        changeFirstName(brinp, writer, threadName, login);
-                    } else if ("zmien nazwisko".equals(line) || "zmień nazwisko".equals(line) || "change last name".equals(line)) {
-                        changeLastName(brinp, writer, threadName, login);
-                    } else if ("zmien pesel".equals(line) || "zmień pesel".equals(line) || "change id".equals(line)) {
-                        changePesel(brinp, writer, threadName, login);
-                    } else if ("zmien haslo".equals(line) || "zmień hasło".equals(line) || "change password".equals(line)) {
-                        changePassword(brinp, writer, threadName, login);
                     } else if ("komendy".equals(line) || "commands".equals(line)) {
                         getCommands(writer);
                         System.out.println(threadName + "| User " + login + " got commands list.");
@@ -71,7 +83,8 @@ public class EchoServerThread implements Runnable {
                         writer.flush();
                         System.out.println(threadName + "| Invalid operation.");
                     }
-                } else if ("zaloguj".equals(line) || "login".equals(line)) {
+                }
+                 else if ("zaloguj".equals(line) || "login".equals(line)) {
                     handleLogin(brinp, writer, threadName);
                 } else if ("rejestracja".equals(line) || "register".equals(line)) {
                     handleRegistration(brinp, writer, threadName);
@@ -95,9 +108,11 @@ public class EchoServerThread implements Runnable {
 
     private void getCommands(BufferedWriter writer) throws IOException {
         String commands;
-        if (isLoggedIn) {
-            commands = "Komendy do wyboru: dane, saldo, wpłata, wypłata, przelew, zmień login, " +
+        if (isLoggedIn && isAdmin == true) {
+            commands = "Komendy do wyboru: zmień login, " +
                        "zmień imię, zmień nazwisko, zmień pesel, zmień hasło, komendy, wyloguj";
+        } else if (isLoggedIn && isAdmin == false){
+            commands = "Komendy do wyboru: dane, saldo, wpłata, wypłata, przelew, komendy, wyloguj";
         } else {
             commands = "Komendy do wyboru: zaloguj, rejestracja, lista, komendy";
         }
@@ -136,7 +151,7 @@ public class EchoServerThread implements Runnable {
                 String currentLine;
                 while ((currentLine = br.readLine()) != null) {
                     String[] userData = currentLine.split(", ");
-                    if (userData.length >= 6 && userData[1].equals(login) && userData[5].equals(password)) {
+                    if (userData.length == 9 && userData[1].equals(login) && userData[5].equals(password)) {
                         userExists = true;
                         break;
                     }
@@ -156,6 +171,20 @@ public class EchoServerThread implements Runnable {
                 writer.write("Niepoprawnie wpisano login/hasło. Podaj login." + System.lineSeparator());
                 writer.flush();
                 System.out.println(threadName + "| User has put incorrect login and/or password.");
+            }
+
+
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("users.txt"), StandardCharsets.UTF_8))) {
+                String currentLine;
+                while ((currentLine = br.readLine()) != null) {
+                    String[] userData = currentLine.split(", ");
+                    if (userData.length == 9 && userData[1].equals(login) && userData[8].equals("true")) {
+                        System.out.println(threadName + "| Logging in " + login + " is admin");
+                        isAdmin = true;
+                    }
+                }
+            } catch (IOException e) {
+                System.err.println(threadName + "| Error reading file: " + e.getMessage());
             }
         }
     }
@@ -231,7 +260,7 @@ public class EchoServerThread implements Runnable {
             try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream("users.txt", true), StandardCharsets.UTF_8))) {
                 bw.write(accountNumber + ", " + login + ", " + name + ", " + lastname + ", " + pesel +
-                         ", " + password + ", 0.0, " + pin + System.lineSeparator());
+                         ", " + password + ", 0.0, " + pin + ", false" + System.lineSeparator());
             } catch (IOException e) {
                 System.err.println(threadName + "| Error writing to file: " + e.getMessage());
                 return;
@@ -250,7 +279,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 2 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(login)) {
                     return true;
                 }
             }
@@ -267,7 +296,7 @@ public class EchoServerThread implements Runnable {
             StringJoiner userList = new StringJoiner(", ");
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 2 && !userData[1].isEmpty()) {
+                if (userData.length == 9 && !userData[1].isEmpty()) {
                     userList.add(userData[1]);
                 }
             }
@@ -452,11 +481,18 @@ public class EchoServerThread implements Runnable {
         writer.flush();
     }
 
-    private void changePassword(BufferedReader brinp, BufferedWriter writer, String threadName, String currentUserLogin) throws IOException {
-        System.out.println(threadName + "| " + login + " wants to change password");
+    private void changePassword(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {///\
+        String changingUser = "";
+        System.out.println(threadName + "| Admin " + login + " wants to change user's password");
         String currentPassword, newPassword, confirmNewPassword;
         List<String> lines = new ArrayList<>();
 
+        System.out.println(threadName + "| Message sent: Enter login of user whose date you want to change");
+        writer.write("Podaj login użytkownika, którego dane chcesz zmienić: " + System.lineSeparator());
+        writer.flush();
+        changingUser = brinp.readLine().trim();
+
+        System.out.println(threadName + "| Asking for old password");
         writer.write("Podaj obecne hasło: " + System.lineSeparator());
         writer.flush();
         currentPassword = brinp.readLine().trim();
@@ -467,7 +503,7 @@ public class EchoServerThread implements Runnable {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] userData = line.split(", ");
-                if (userData.length >= 7 && userData[1].equals(currentUserLogin)) {
+                if (userData.length == 9 && userData[1].equals(changingUser)) {
                     if (userData[5].equals(currentPassword)) {
                         passwordCorrect = true;
                     }
@@ -501,7 +537,7 @@ public class EchoServerThread implements Runnable {
         try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("users.txt"), StandardCharsets.UTF_8))) {
             for (String line : lines) {
                 String[] userData = line.split(", ");
-                if (userData.length >= 7 && userData[1].equals(currentUserLogin)) {
+                if (userData.length == 9 && userData[1].equals(changingUser)) {
                     userData[5] = newPassword;
                     line = String.join(", ", userData);
                 }
@@ -513,7 +549,7 @@ public class EchoServerThread implements Runnable {
 
         writer.write("Hasło zostało zmienione pomyślnie." + System.lineSeparator());
         writer.flush();
-        System.out.println(threadName + "| " + login + " has set a new password");
+        System.out.println(threadName + "| " + changingUser + " has set a new password");
     }
 
     private void showUserInfo(BufferedWriter writer, String threadName, String currentUserLogin) throws IOException {
@@ -525,7 +561,7 @@ public class EchoServerThread implements Runnable {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] userData = line.split(", ");
-                if (userData.length >= 7 && userData[1].equals(currentUserLogin)) {
+                if (userData.length == 9 && userData[1].equals(currentUserLogin)) {
                     String accountNumber = userData[0];
                     String login = userData[1];
                     String name = userData[2];
@@ -560,6 +596,7 @@ public class EchoServerThread implements Runnable {
         System.out.println(threadName + "| Logged out successfully.");
         login = null;
         isLoggedIn = false;
+        isAdmin = false;
     }
 
     private String findUserBalance(String login) {
@@ -567,7 +604,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(login)) {
                     return userData[6];
                 }
             }
@@ -582,7 +619,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(login)) {
                     return userData[7];
                 }
             }
@@ -592,8 +629,15 @@ public class EchoServerThread implements Runnable {
         return null;
     }
 
-    private void changeLogin(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
-        System.out.println(threadName + "| " + login + " wants to change login");
+    private void changeLogin(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {///\
+        String changingUser = "";
+        System.out.println(threadName + "| Admin " + login + " wants to change user's login");
+        System.out.println(threadName + "| Message sent: Enter login of user whose date you want to change");
+        writer.write("Podaj login użytkownika, którego dane chcesz zmienić: " + System.lineSeparator());
+        writer.flush();
+        changingUser = brinp.readLine().trim();
+
+        System.out.println(threadName + "| Asking for new login");
         writer.write("Wprowadź nowy login!" + System.lineSeparator());
         writer.flush();
         String newLogin = brinp.readLine().trim();
@@ -603,11 +647,11 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(changingUser)) {
                     userData[1] = newLogin;
                     setLogin(newLogin);
                     currentLine = String.join(", ", userData);
-                    System.out.println(threadName + "| " + login + " has new login - " + newLogin);
+                    System.out.println(threadName + "| " + changingUser + " has new login - " + newLogin);
                 }
                 users.add(currentLine);
             }
@@ -625,8 +669,15 @@ public class EchoServerThread implements Runnable {
         writer.flush();
     }
 
-    private void changeFirstName(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
-        System.out.println(threadName + "| " + login + " wants to change first name");
+    private void changeFirstName(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {///\
+        String changingUser = "";
+        System.out.println(threadName + "| Admin " + login + " wants to change user's first name");
+        System.out.println(threadName + "| Message sent: Enter login of user whose date you want to change");
+        writer.write("Podaj login użytkownika, którego dane chcesz zmienić: " + System.lineSeparator());
+        writer.flush();
+        changingUser = brinp.readLine().trim();
+
+        System.out.println(threadName + "| Asking for new first name");
         writer.write("Wprowadź nowe imię!" + System.lineSeparator());
         writer.flush();
         String newFirstName = brinp.readLine().trim();
@@ -636,10 +687,10 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(changingUser)) {
                     userData[2] = newFirstName;
                     currentLine = String.join(", ", userData);
-                    System.out.println(threadName + "| " + login + " has new first name - " + newFirstName);
+                    System.out.println(threadName + "| " + changingUser + " has new first name - " + newFirstName);
                 }
                 users.add(currentLine);
             }
@@ -658,8 +709,15 @@ public class EchoServerThread implements Runnable {
         writer.flush();
     }
 
-    private void changeLastName(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
-        System.out.println(threadName + "| " + login + " wants to change last name");
+    private void changeLastName(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {///\
+        String changingUser = "";
+        System.out.println(threadName + "| Admin " + login + " wants to change user's last name");
+        System.out.println(threadName + "| Message sent: Enter login of user whose date you want to change");
+        writer.write("Podaj login użytkownika, którego dane chcesz zmienić: " + System.lineSeparator());
+        writer.flush();
+        changingUser = brinp.readLine().trim();
+
+        System.out.println(threadName + "| Asking for new last name");
         writer.write("Wprowadź nowe nazwisko!" + System.lineSeparator());
         writer.flush();
         String newLastName = brinp.readLine().trim();
@@ -669,10 +727,10 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(changingUser)) {
                     userData[3] = newLastName;
                     currentLine = String.join(", ", userData);
-                    System.out.println(threadName + "| " + login + " has new last name - " + newLastName);
+                    System.out.println(threadName + "| " + changingUser + " has new last name - " + newLastName);
                 }
                 users.add(currentLine);
             }
@@ -691,11 +749,18 @@ public class EchoServerThread implements Runnable {
         writer.flush();
     }
 
-    private void changePesel(BufferedReader brinp, BufferedWriter writer, String threadName, String login) throws IOException {
-        System.out.println(threadName + "| " + login + " wants to change PESEL");
+    private void changePesel(BufferedReader brinp, BufferedWriter writer, String threadName) throws IOException {///\
+        String changingUser = "";
+        System.out.println(threadName + "| Admin " + login + " wants to change user's PESEL");
         String newPesel = "";
-
         boolean isPeselValid = false;
+
+        System.out.println(threadName + "| Message sent: Enter login of user whose date you want to change");
+        writer.write("Podaj login użytkownika, którego dane chcesz zmienić: " + System.lineSeparator());
+        writer.flush();
+        changingUser = brinp.readLine().trim();
+
+        System.out.println(threadName + "| Asking for new PESEL (ID number)");
         writer.write("Podaj nowy PESEL: " + System.lineSeparator());
         writer.flush();
         while (!isPeselValid) {
@@ -713,10 +778,10 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(changingUser)) {
                     userData[4] = newPesel;
                     currentLine = String.join(", ", userData);
-                    System.out.println(threadName + "| " + login + " has new last name - " + newPesel);
+                    System.out.println(threadName + "| " + changingUser + " has new last name - " + newPesel);
                 }
                 users.add(currentLine);
             }
@@ -740,7 +805,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = br.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length == 8 && userData[0].equals(receiverAccountNumber)) {
+                if (userData.length == 9 && userData[0].equals(receiverAccountNumber)) {
                     System.out.println(threadName + "| " + login + " provided correct destination.");
                     return userData[1];
                 }
@@ -790,7 +855,7 @@ public class EchoServerThread implements Runnable {
             String currentLine;
             while ((currentLine = file.readLine()) != null) {
                 String[] userData = currentLine.split(", ");
-                if (userData.length >= 7 && userData[1].equals(login)) {
+                if (userData.length == 9 && userData[1].equals(login)) {
                     userData[6] = Double.toString(newSaldo);
                     currentLine = String.join(", ", userData);
                 }

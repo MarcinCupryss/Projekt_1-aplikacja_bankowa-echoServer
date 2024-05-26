@@ -1,3 +1,5 @@
-72685457, adam, Adam, Kowalski, 35325325325, pass, 8201.5, 1234
-52884119, Jean123, Jan, Kowalski, 48574839485, pass, 46.0, 2345
-12345678, Bear, Janusz, Pieniężny, 48574359485, pass, 3778.0, 1234
+72685457, adam, Adam, Kowalski, 35325325325, pas, 9344.5, 1234, false
+52884119, Jean123, Jan, Kowalski, 48574839485, pass, 46.0, 2345, false
+12345678, Bear, Janusz, Pieniężny, 48574359485, pass, 4635.0, 1234, false
+99999999, admin, admin, admin, 99999999999, admin, 0, 9999, true
+67305840, cup, Marcin, Cup, 45574859685, pass, 0.0, 1234, false
